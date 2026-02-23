@@ -1,0 +1,62 @@
+name: Spec Lint
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+
+      - name: Validate SPEC.md status lines
+        run: |
+          if [ ! -f SPEC.md ]; then
+            echo "No SPEC.md found — skipping status check"
+            exit 0
+          fi
+
+          errors=0
+          section=""
+          expect_status=false
+
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^##\ [0-9]+\. ]]; then
+              if $expect_status; then
+                echo "::error::Section '$section' has no *Status: line"
+                errors=$((errors + 1))
+              fi
+              section="$line"
+              expect_status=true
+              continue
+            fi
+
+            if $expect_status; then
+              # skip blank lines between heading and status
+              if [[ -z "$line" ]]; then
+                continue
+              fi
+
+              if [[ "$line" =~ ^\*Status:\ *(not\ started|in\ progress|complete\ —) ]]; then
+                expect_status=false
+              else
+                echo "::error::Section '$section' has invalid or missing status line: $line"
+                errors=$((errors + 1))
+                expect_status=false
+              fi
+            fi
+          done < <(tr -d '\r' < SPEC.md)
+
+          if $expect_status; then
+            echo "::error::Section '$section' has no *Status: line (end of file)"
+            errors=$((errors + 1))
+          fi
+
+          if [ "$errors" -gt 0 ]; then
+            echo "$errors status-line error(s) found"
+            exit 1
+          fi
+
+          echo "All numbered sections have valid status lines"
