@@ -2,6 +2,14 @@ name: Spec Lint
 
 on:
   workflow_call:
+    inputs:
+      readme-type:
+        description: >
+          README heading validation profile: "library", "application", or ""
+          (empty string skips validation). Default is "" for backward compat.
+        required: false
+        type: string
+        default: ""
 
 jobs:
   lint:
@@ -60,3 +68,52 @@ jobs:
           fi
 
           echo "All numbered sections have valid status lines"
+
+      - name: Validate README.md headings
+        if: inputs.readme-type != ''
+        run: |
+          if [ ! -f README.md ]; then
+            echo "::error::README.md not found"
+            exit 1
+          fi
+
+          readme_type="${{ inputs.readme-type }}"
+          errors=0
+
+          # Extract H2 headings, strip "## ", lowercase
+          headings=$(grep -E '^## ' README.md | sed 's/^## //' | tr '[:upper:]' '[:lower:]')
+
+          check_heading() {
+            local label="$1"
+            local pattern="$2"
+            if ! echo "$headings" | grep -qxE "$pattern"; then
+              echo "::error::README.md missing required heading: $label (expected pattern: $pattern)"
+              errors=$((errors + 1))
+            fi
+          }
+
+          # Common to both types
+          check_heading "License" "licen(se|sing)|licensing note"
+
+          case "$readme_type" in
+            library)
+              check_heading "Installation" "install(ation)?|getting started|quick start"
+              check_heading "Usage" "usage"
+              check_heading "API" "api|api reference"
+              ;;
+            application)
+              check_heading "Getting Started" "quick start|getting started|install(ation)?"
+              check_heading "Usage" "usage"
+              ;;
+            *)
+              echo "::error::Unknown readme-type: $readme_type (expected 'library' or 'application')"
+              exit 1
+              ;;
+          esac
+
+          if [ "$errors" -gt 0 ]; then
+            echo "$errors README heading error(s) found"
+            exit 1
+          fi
+
+          echo "All required README headings present for type '$readme_type'"
