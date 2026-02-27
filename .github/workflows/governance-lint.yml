@@ -54,7 +54,7 @@ jobs:
                 continue
               fi
 
-              if [[ "$line" =~ ^\*Status:\ *(not\ started|in\ progress|complete\ —) ]]; then
+              if [[ "$line" =~ ^\*Status:\ (not\ started|in\ progress|complete)\*$ ]]; then
                 expect_status=false
               else
                 echo "::error::Section '$section' has invalid or missing status line: $line"

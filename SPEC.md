@@ -2,7 +2,7 @@
 
 ## 1. Problem Statement
 
-*Status: complete — PR #1, 2026-02-23*
+*Status: complete*
 
 Repos lack consistent enforcement of documentation structure. SPEC.md
 status lines, README headings, and markdown formatting drift or go
@@ -10,7 +10,7 @@ unchecked. Each repo either reimplements validation or skips it.
 
 ## 2. Reusable Spec Lint Workflow
 
-*Status: complete — PR #1, 2026-02-23*
+*Status: complete*
 
 The system shall provide a single reusable workflow (`spec-lint.yml`)
 that callers invoke via `workflow_call`. One job runs three checks in
@@ -19,14 +19,14 @@ README heading validation.
 
 The SPEC.md validator shall require every `## N.` numbered section to
 contain a `*Status:` line matching `not started`, `in progress`, or
-`complete — …`. Sections without a status line or with malformed status
+`complete`. Sections without a status line or with malformed status
 lines shall produce `::error::` annotations and fail the job.
 
 When no `SPEC.md` exists, the validator shall skip without error.
 
 ## 3. README Heading Validation
 
-*Status: complete — PR #1, 2026-02-23*
+*Status: complete*
 
 The workflow shall accept a `readme-type` input: `library`,
 `application`, or `""` (empty string). Empty default preserves backward
@@ -46,7 +46,7 @@ Required headings by type:
 
 ## 4. Release Automation
 
-*Status: complete — PR #2, 2026-02-23*
+*Status: complete*
 
 Releases shall follow conventional commits with automated version bumps
 via release-please. A floating major version tag (`v1`) shall
