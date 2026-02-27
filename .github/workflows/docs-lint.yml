@@ -1,4 +1,4 @@
-name: Spec Lint
+name: Docs Lint
 
 on:
   workflow_call:
@@ -17,7 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # CHANGELOG.md is excluded — release-please generates it and
+      # consumers don't control its format.
       - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            **/*.md
+            !CHANGELOG.md
 
       - name: Validate SPEC.md status lines
         run: |

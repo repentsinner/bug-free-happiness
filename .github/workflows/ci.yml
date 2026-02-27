@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  spec-lint:
-    uses: ./.github/workflows/spec-lint.yml
+  docs-lint:
+    uses: ./.github/workflows/docs-lint.yml
     with:
       readme-type: library
