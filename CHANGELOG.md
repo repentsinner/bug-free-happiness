@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.3](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.2...v0.1.3) (2026-02-27)
+
+
+### Bug Fixes
+
+* **ci:** accept bare "complete" in SPEC.md status lines ([f0bb1b1](https://github.com/repentsinner/bug-free-happiness/commit/f0bb1b1421f8337ae7afca25aba48215212a1a08))
+* **ci:** enforce exact status line values in SPEC.md ([928d1dd](https://github.com/repentsinner/bug-free-happiness/commit/928d1dd93f23bb18ebfedd743121549440f0df92))
+
 ## [0.1.2](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.1...v0.1.2) (2026-02-27)
 
 
