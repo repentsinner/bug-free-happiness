@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  docs-lint:
-    uses: ./.github/workflows/docs-lint.yml
+  governance-lint:
+    uses: ./.github/workflows/governance-lint.yml
     with:
       readme-type: library
