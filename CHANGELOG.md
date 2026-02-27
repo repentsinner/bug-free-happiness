@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.1...v0.1.2) (2026-02-27)
+
+
+### Bug Fixes
+
+* **ci:** lint only governance files in docs-lint ([9856d08](https://github.com/repentsinner/bug-free-happiness/commit/9856d08dcbf538bb097971129bdd405f0735e631))
+* **ci:** lint only governance files in docs-lint ([94488f8](https://github.com/repentsinner/bug-free-happiness/commit/94488f8910abe71a00fd23115323c78309958210))
+
 ## [0.1.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.0...v0.1.1) (2026-02-27)
 
 
