@@ -4,30 +4,45 @@
 
 *Status: in progress*
 
-Repos lack consistent enforcement of documentation structure. SPEC.md
-status lines, README headings, and markdown formatting drift or go
-unchecked. Each repo either reimplements validation or skips it.
+Repos lack a shared, enforceable definition of what well-formed
+governance documents look like. SPEC.md status lines, README headings,
+markdown formatting, and cross-document traceability drift or go
+unchecked. Each repo either reimplements the rules, the validation, and
+the scaffolding, or skips them.
 
-bug-free-happiness is the enforcement arm of a conventions kernel — the
-single reusable workflow that validates a repo's governance documents in
-CI. It serves two audiences from one workflow:
+bug-free-happiness is the conventions kernel — the single source of truth
+a repo adopts to participate in the governance loop. It owns three faces,
+released together on one version line:
+
+- **Contract** (§ 8) — the canonical grammar: governance file formats,
+  the `§`-slug rules, and the status-line format.
+- **Scaffolder** (§ 9) — the command that materializes the contract and a
+  CI caller into an adopter repo.
+- **Enforcement** (§ 2–§ 7) — the reusable workflow that validates a repo
+  against the contract in CI.
+
+It serves a spectrum of adopters from these three faces:
 
 - **Generic adopters** want documentation hygiene — markdown formatting,
-  SPEC.md status lines, README heading profiles — without adopting any
-  particular governance methodology. These checks run by default.
-- **Governance-system adopters** (e.g. the symphonize plugin suite)
-  layer a slug-based traceability contract on top — `§`-prefixed
-  cross-references between SPEC.md, ROADMAP.md, and REQUIREMENTS.md, plus
-  prose linting. These checks are opt-in (§ 5) so they never burden
-  adopters who have not bought into the contract.
+  SPEC.md status lines, README heading profiles — without any governance
+  methodology. They reference the enforcement workflow with no opt-in
+  flags; the generic core (§ 2) is all they get.
+- **Governance-system adopters** (e.g. the symphonize plugin suite) take
+  the full contract: the slug-based traceability grammar, the scaffolder,
+  and the enforcement workflow with the governance checks (§ 5) switched
+  on.
 
-**Why one workflow, two audiences:** a governance system that owns its
-own lint couples enforcement to that system's release cadence and forces
-every downstream repo to inherit the system's full opinion. Factoring
-enforcement into a standalone, opt-in workflow lets the generic checks be
-adopted alone, lets the governance-specific checks evolve behind a flag,
-and gives the governance system a single source of truth for "is this
-repo's documentation valid" that it consumes rather than re-implements.
+**Why one repo, not a kernel split across repos:** a linter is the
+executable form of the contract — the lint rules and the grammar are one
+specification viewed two ways. Co-locating contract, scaffolder, and
+enforcement under one version makes their coherence structural: one tag
+moves all three together, so they cannot drift. Splitting them
+reintroduces a cross-repo version handshake that has already failed in
+practice — the enforcement workflow once validated numbered `## N.`
+sections while the canonical grammar had moved to slug-style headings,
+and nothing caught the divergence. The only version handshake the kernel
+keeps is the outer one, between the kernel and its plugin consumers
+(§ 6, § 10).
 
 ## 2. Reusable Governance Lint Workflow
 
@@ -169,11 +184,13 @@ gets nothing. The version contract closes that gap.
 
 **Why a marker, not the plugin dependency field:** Claude Code plugins
 declare machine-enforced `dependencies` with semver ranges, but
-bug-free-happiness is a reusable GitHub Actions workflow referenced by
-git ref, not a plugin. Its coherence rests on the `@vN` ref pin plus the
-`contracts-version` marker. The plugin dependency mechanism governs the
-conventions *plugin* and its plugin consumers — a separate layer of the
-kernel, not this workflow.
+the enforcement workflow is a reusable GitHub Actions workflow referenced
+by git ref, not a plugin. Its coherence rests on the `@vN` ref pin plus
+the `contracts-version` marker. The plugin `dependencies` field governs a
+different edge: between the scaffolder plugin (§ 9) and the plugin
+consumers that depend on it (e.g. the future curate and dispatch
+plugins). Both artifacts ship from this one repo (§ 10), but through
+different distribution channels with different coherence mechanisms.
 
 **Tradeoff accepted:** the `contracts-version` marker is detected, not
 enforced by a package manager. The kernel cannot refuse to run against a
@@ -189,3 +206,97 @@ release-please. A floating major-version tag auto-updates when a new
 release is published, so callers referencing the major tag track the
 latest compatible version without changing their workflows. The major
 tag the README and scaffolding reference is governed by § 6.
+
+## 8. Conventions Contract
+
+*Status: not started*
+
+The kernel holds the canonical CONVENTIONS.md — the grammar that defines
+governance file formats, the `§req:`/`§spec:`/`§road:` slug rules, and the
+status-line format. This file is the source of truth. Adopter repos
+receive a materialized copy (§ 9) rather than referencing it at runtime,
+because a CI step and a working agent can only reliably read files in
+their own workspace.
+
+The materialized copy carries a `contracts-version` marker (§ 6) naming
+the grammar version it was cut from, so an adopter's documents, its lint
+runs, and the kernel agree on one grammar.
+
+The contract splits along the same line as enforcement (§ 5):
+
+- The **generic-core grammar** — status-line format and README heading
+  profiles — applies to every adopter.
+- The **traceability grammar** — the `§`-slug rules and cross-document
+  reference conventions — applies only to governance-system adopters who
+  opt in.
+
+**Why the kernel owns the canonical grammar:** the grammar and the lint
+that enforces it must agree, and § 1 places both in this repo for that
+reason. A consumer that kept its own grammar copy as the source of truth
+would recreate the drift the single-repo design exists to prevent. The
+kernel defines; adopters receive.
+
+**Why materialize, not reference at runtime:** a referenced contract
+would require every adopter's CI and every agent acting on the repo to
+reach into this repo's checkout. Materializing a versioned copy into the
+adopter keeps the contract readable in the one place tools can always
+see — the adopter's own working tree — at the cost of a version marker to
+detect staleness.
+
+## 9. Scaffolder
+
+*Status: not started*
+
+The kernel provides a scaffolder — a Claude Code plugin command — that
+materializes the contract and a CI caller workflow into an adopter repo.
+Running it writes the governance file skeletons, the materialized
+CONVENTIONS.md with its `contracts-version` marker, and a caller workflow
+referencing this repo's `governance-lint.yml` at the matching major
+version. The scaffolder is idempotent: it skips files that already exist
+and warns rather than overwrites.
+
+Because the scaffolder and the enforcement workflow ship from the same
+repo and version, a freshly scaffolded project references a coherent
+kernel — the contract it receives, the lint it calls, and the grammar
+version it records all originate from one release.
+
+**Why the scaffolder lives with the contract and lint:** scaffolding is
+the act of distributing the contract. A scaffolder in a different repo or
+at a different version could write a caller that pins a lint version
+incompatible with the contract version it materializes — the exact
+incoherence § 1 rejects. One repo, one version, removes that failure
+mode.
+
+**Migration note:** the scaffolder and the canonical CONVENTIONS.md
+currently live in the symphonize repository (`commands/init.md` and
+`CONVENTIONS.md`). The end state is that the kernel owns the canonical
+versions and symphonize consumes them as one adopter among others.
+Dismantling the symphonize-side originals is a separate downstream
+change; this section establishes only that the kernel repo owns these
+artifacts.
+
+## 10. Single-Repo, Dual Packaging
+
+*Status: not started*
+
+The kernel ships two artifact types from one repository on one version
+line:
+
+- The **reusable GitHub Actions workflow** (§ 2), consumed via
+  `uses: …/governance-lint.yml@<major>` — a git-ref reference resolved by
+  GitHub Actions.
+- The **scaffolder plugin** (§ 9), consumed through a Claude Code plugin
+  marketplace — resolved by the plugin manager, which can sparse-checkout
+  the plugin subtree and enforce semver `dependencies` between plugins.
+
+The two consumption paths do not collide: CI consumers reference a path
+and a tag; plugin consumers install through the marketplace. One
+release-please version and one tag cover both.
+
+**Why this is not two repos:** the workflow and the scaffolder are two
+distribution channels for the same contract. Separating them by repo
+would split the kernel's version line and reintroduce the coherence
+problem § 1 solves. The two coherence mechanisms in § 6 — the `@vN` ref
+pin for the workflow and the `contracts-version` marker for materialized
+files — both originate here. The plugin `dependencies` field governs only
+the outer kernel↔plugin-consumer edge, not these in-repo artifacts.
