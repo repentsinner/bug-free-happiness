@@ -14,8 +14,10 @@ bug-free-happiness is the conventions kernel — the single source of truth
 a repo adopts to participate in the governance loop. It owns three faces,
 released together on one version line:
 
-- **Contract** (§ 8) — the canonical grammar: governance file formats,
-  the `§`-slug rules, and the status-line format.
+- **Contract** (§ 8) — the canonical *structural* grammar: governance
+  file formats, the `§`-slug rules, the status-line format, and the
+  cross-reference rules. It defines what a well-formed governance
+  document is, not how to author one.
 - **Scaffolder** (§ 9) — the command that materializes the contract and a
   CI caller into an adopter repo.
 - **Enforcement** (§ 2–§ 7) — the reusable workflow that validates a repo
@@ -211,18 +213,21 @@ tag the README and scaffolding reference is governed by § 6.
 
 *Status: not started*
 
-The kernel holds the canonical CONVENTIONS.md — the grammar that defines
-governance file formats, the `§req:`/`§spec:`/`§road:` slug rules, and the
-status-line format. This file is the source of truth. Adopter repos
-receive a materialized copy (§ 9) rather than referencing it at runtime,
-because a CI step and a working agent can only reliably read files in
-their own workspace.
+The kernel owns the **structural contract** — the machine-checkable
+grammar that defines what a well-formed governance document is:
+governance file formats, the `§req:`/`§spec:`/`§road:` slug rules, the
+status-line format, the cross-reference rules (§ 5), and the
+governance-root definition (which directories are governance roots and
+how files scope to them). A canonical document in this repo is the
+source of truth. Adopter repos receive a materialized copy (§ 9) rather
+than referencing it at runtime, because a CI step and a working agent can
+only reliably read files in their own workspace.
 
 The materialized copy carries a `contracts-version` marker (§ 6) naming
 the grammar version it was cut from, so an adopter's documents, its lint
 runs, and the kernel agree on one grammar.
 
-The contract splits along the same line as enforcement (§ 5):
+The structural contract splits along the same line as enforcement (§ 5):
 
 - The **generic-core grammar** — status-line format and README heading
   profiles — applies to every adopter.
@@ -230,11 +235,26 @@ The contract splits along the same line as enforcement (§ 5):
   reference conventions — applies only to governance-system adopters who
   opt in.
 
-**Why the kernel owns the canonical grammar:** the grammar and the lint
-that enforces it must agree, and § 1 places both in this repo for that
-reason. A consumer that kept its own grammar copy as the source of truth
-would recreate the drift the single-repo design exists to prevent. The
-kernel defines; adopters receive.
+**Scope boundary — what the contract excludes:** the kernel is
+content-agnostic. The contract defines document *structure*, not
+authoring *methodology* or development *process*. How to write a good
+spec (declarative, rationale-driven, thin vertical slices), how to run
+discovery (interview frameworks), how to compress a completed section,
+and process rules (branching, commit conventions, the quality gate) are
+the opinions of a governance *system* built on the kernel, not part of
+the kernel contract. They live in that system's own layers — for
+symphonize, its curation and dispatch commands — and a generic adopter
+never inherits them. A governance system's own conventions document
+(e.g. symphonize's `CONVENTIONS.md`) therefore bundles three contracts;
+only the structural one is the kernel's and is materialized from here.
+
+**Why the kernel owns the structural contract:** the grammar and the lint
+that enforces it shall agree, and § 1 places both in this repo for that
+reason. A consumer that kept its own structural-grammar copy as the
+source of truth would recreate the drift the single-repo design exists to
+prevent. The kernel defines structure; adopters receive it. The kernel
+deliberately does not define methodology, because a generic linter cannot
+enforce it and a generic adopter does not want it.
 
 **Why materialize, not reference at runtime:** a referenced contract
 would require every adopter's CI and every agent acting on the repo to
