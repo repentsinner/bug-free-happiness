@@ -56,7 +56,8 @@ runs the checks in sequence; failures surface as `::error::` annotations.
 
 The always-on generic core comprises:
 
-- **markdownlint** over the governance files present in the repo.
+- **markdownlint** over SPEC.md, ROADMAP.md, and README.md (CHANGELOG.md
+  is excluded — see § 5).
 - **SPEC.md status-line validation** (§ 3).
 - **README heading validation** (§ 4), active only when `readme-type` is
   set.
@@ -121,7 +122,9 @@ The workflow shall expose boolean `workflow_call` inputs that enable the
 governance-system-specific checks. Each defaults to `false`, so a caller
 that sets none gets only the generic core (§ 2). The inputs:
 
-- **`traceability`** — enables the slug-based traceability checks:
+- **`traceability`** — enables the governance-doc-model checks (the
+  `§`-slug contract presupposes the document set, so REQUIREMENTS linting
+  rides here too):
   - Heading-slug presence: every `##` SPEC.md heading carries a
     `§spec:<slug>`; every `###` ROADMAP.md heading a `§road:<slug>`;
     every `##` REQUIREMENTS.md heading a `§req:<slug>`.
@@ -129,26 +132,31 @@ that sets none gets only the generic core (§ 2). The inputs:
     reference appearing in a governance document resolves to a defined
     heading slug. Dangling references fail the job. References inside
     fenced code blocks and inline code spans are exempt.
+  - markdownlint over REQUIREMENTS.md (the generic core, § 2, covers
+    SPEC/ROADMAP/README; REQUIREMENTS exists only under this model).
 - **`vale`** — runs the Vale prose linter when a `.vale.ini` config
   exists in the repo. Absent the config, the step is a no-op even when
   the input is `true`.
-- **`extended-globs`** — widens markdownlint and structure validation to
-  REQUIREMENTS.md and CHANGELOG.md, and enables CHANGELOG.md structure
-  validation (an `## [Unreleased]` section is present; every `##`
-  heading is `[Unreleased]` or a `[N.N.N]` version).
 
-**Why opt-in, not always-on:** the traceability contract, Vale, and the
-CHANGELOG structure are symphonize's opinion, not universal documentation
-hygiene. Forcing them on every adopter would make the workflow unusable
-for the generic audience (§ 1) and defeat the reason for extracting it.
-Defaulting each input to `false` keeps the generic core adoptable alone
-while letting a governance-system caller switch on the full contract in
-one place.
+CHANGELOG.md is excluded from every check. release-please generates it
+from conventional commits and regenerates it each release, so enforcing
+its structure or formatting fights the generator and is overwritten. The
+schema references CHANGELOG as the history endpoint but does not enforce
+its shape — its format is owned by release-please and the Keep a Changelog
+convention.
 
-**Why booleans, not a single mode string:** the checks are independent —
-a repo may want prose linting without slug traceability, or extended
-globs without Vale. Independent toggles compose; a single enumerated
-mode would force the caller to accept bundles they did not ask for.
+**Why opt-in, not always-on:** the traceability contract and Vale are
+symphonize's opinion, not universal documentation hygiene. Forcing them on
+every adopter would make the workflow unusable for the generic audience
+(§ 1) and defeat the reason for extracting it. Defaulting each input to
+`false` keeps the generic core adoptable alone while letting a
+governance-system caller switch on the full contract in one place.
+
+**Why booleans, not a single mode string:** the two checks are
+independent — a repo may want prose linting (Vale) without slug
+traceability, or the reverse. Independent toggles compose; a single
+enumerated mode would force the caller to accept bundles they did not ask
+for.
 
 **Tradeoff accepted:** more inputs widen the workflow's surface and the
 matrix of states to test. The independence is worth the surface — the
