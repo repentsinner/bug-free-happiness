@@ -18,8 +18,8 @@ released together on one version line:
   file formats, the `§`-slug rules, the status-line format, and the
   cross-reference rules. It defines what a well-formed governance
   document is, not how to author one.
-- **Scaffolder** (§ 9) — the command that materializes the contract and a
-  CI caller into an adopter repo.
+- **Scaffolder** (§ 9) — the command that wires an adopter repo up to the
+  kernel (governance skeletons plus a pinned CI caller).
 - **Enforcement** (§ 2–§ 7) — the reusable workflow that validates a repo
   against the contract in CI.
 
@@ -159,22 +159,27 @@ to maintain.
 
 *Status: not started*
 
-A caller pins the workflow with `uses: …/governance-lint.yml@<ref>`. The
-version contract shall make that reference coherent across three facets:
+A caller pins the workflow with `uses: …/governance-lint.yml@<ref>`. Two
+existing mechanisms — not a bespoke marker — carry version coherence:
 
-- The floating major-version tag tracks the latest compatible release,
-  so callers pinning `@vN` receive backward-compatible updates without
-  editing their workflow. The tag shall point at the published release it
-  names — it shall not lag behind a renamed or restructured workflow.
-- The major tag the README and scaffolding instruct callers to pin shall
-  match the published major version. While the tool is pre-1.0, that
-  reference is `@v0` (or a pinned `@v0.N.N`), not `@v1`.
-- A governance-system caller and the kernel agree on a grammar version
-  through a `contracts-version` marker carried in the consuming repo's
-  materialized conventions (e.g. CONVENTIONS.md frontmatter). The kernel
-  declares the grammar version it enforces; the caller's governance-lint
-  step is expected to run a kernel ref whose grammar version matches the
-  marker. A mismatch is a detectable drift, not a silent one.
+- **The workflow ref.** The floating major-version tag tracks the latest
+  compatible release, so callers pinning `@vN` receive backward-compatible
+  updates without editing their workflow. The tag shall point at the
+  published release it names — it shall not lag behind a renamed or
+  restructured workflow. The major the README and scaffolding instruct
+  callers to pin shall match the published major; while the tool is
+  pre-1.0, that reference is `@v0` (or a pinned `@v0.N.N`), not `@v1`.
+- **The plugin dependency.** Plugin consumers (the future curate and
+  dispatch plugins) declare a machine-enforced semver `dependencies` on
+  the scaffolder plugin (§ 9); the plugin manager resolves and enforces
+  that range.
+
+Together these pin both faces of the kernel — the CI workflow by git ref,
+the plugin by dependency range — to one repo's version line. No separate
+`contracts-version` marker is needed: the grammar is not shipped to
+adopters as a file (§ 8), so there is nothing to carry a marker, and the
+ref and the dependency already declare which kernel version a repo
+targets.
 
 **Why this matters now:** the `spec-lint.yml → governance-lint.yml`
 rename (§ 2) changed the workflow path without moving the floating major
@@ -182,22 +187,7 @@ tag, so `@v1` still resolves the old `spec-lint.yml` while `main` ships
 `governance-lint.yml`. The README instructs callers to pin
 `spec-lint.yml@v1`, a reference that survives only because the tag is
 stale. A caller adopting the current workflow by its real name and major
-gets nothing. The version contract closes that gap.
-
-**Why a marker, not the plugin dependency field:** Claude Code plugins
-declare machine-enforced `dependencies` with semver ranges, but
-the enforcement workflow is a reusable GitHub Actions workflow referenced
-by git ref, not a plugin. Its coherence rests on the `@vN` ref pin plus
-the `contracts-version` marker. The plugin `dependencies` field governs a
-different edge: between the scaffolder plugin (§ 9) and the plugin
-consumers that depend on it (e.g. the future curate and dispatch
-plugins). Both artifacts ship from this one repo (§ 10), but through
-different distribution channels with different coherence mechanisms.
-
-**Tradeoff accepted:** the `contracts-version` marker is detected, not
-enforced by a package manager. The kernel cannot refuse to run against a
-mismatched consumer; it can only surface the mismatch. For a CI workflow
-pinned by ref, detection is the available guarantee.
+gets nothing. The ref discipline above closes that gap.
 
 ## 7. Release Automation
 
@@ -213,19 +203,20 @@ tag the README and scaffolding reference is governed by § 6.
 
 *Status: not started*
 
-The kernel owns the **structural contract** — the machine-checkable
-grammar that defines what a well-formed governance document is:
-governance file formats, the `§req:`/`§spec:`/`§road:` slug rules, the
-status-line format, the cross-reference rules (§ 5), and the
-governance-root definition (which directories are governance roots and
-how files scope to them). A canonical document in this repo is the
-source of truth. Adopter repos receive a materialized copy (§ 9) rather
-than referencing it at runtime, because a CI step and a working agent can
-only reliably read files in their own workspace.
+The kernel defines the **structural contract** — the machine-checkable
+grammar for a well-formed governance document: governance file formats,
+the `§req:`/`§spec:`/`§road:` slug rules, the status-line format, the
+cross-reference rules (§ 5), and the governance-root definition (which
+directories are governance roots and how files scope to them).
 
-The materialized copy carries a `contracts-version` marker (§ 6) naming
-the grammar version it was cut from, so an adopter's documents, its lint
-runs, and the kernel agree on one grammar.
+The contract is **expressed, not distributed**: it ships no document to
+adopters. It is operative in two forms — the **enforcement workflow**
+(§ 2) is its executable form (what the linter checks *is* the contract),
+and the kernel's own documentation is its human-readable form. Plugin
+consumers (curate, dispatch) are built against this grammar and carry what
+they need to produce conforming documents; they do not read a contract
+file from the adopter's repo, and the linter does not either — its rules
+live in the workflow. So no per-adopter `CONVENTIONS.md` is materialized.
 
 The structural contract splits along the same line as enforcement (§ 5):
 
@@ -246,54 +237,61 @@ the kernel contract. They live in that system's own layers — for
 symphonize, its curation and dispatch commands — and a generic adopter
 never inherits them. A governance system's own conventions document
 (e.g. symphonize's `CONVENTIONS.md`) therefore bundles three contracts;
-only the structural one is the kernel's and is materialized from here.
+only the structural one is the kernel's, and the kernel expresses it
+through enforcement, not a shipped document.
 
 **Why the kernel owns the structural contract:** the grammar and the lint
 that enforces it shall agree, and § 1 places both in this repo for that
 reason. A consumer that kept its own structural-grammar copy as the
 source of truth would recreate the drift the single-repo design exists to
-prevent. The kernel defines structure; adopters receive it. The kernel
-deliberately does not define methodology, because a generic linter cannot
-enforce it and a generic adopter does not want it.
+prevent. The kernel deliberately does not define methodology, because a
+generic linter cannot enforce it and a generic adopter does not want it.
 
-**Why materialize, not reference at runtime:** a referenced contract
-would require every adopter's CI and every agent acting on the repo to
-reach into this repo's checkout. Materializing a versioned copy into the
-adopter keeps the contract readable in the one place tools can always
-see — the adopter's own working tree — at the cost of a version marker to
-detect staleness.
+**Why expressed, not distributed:** once the linter is the executable
+form of the contract and the plugin consumers are built against the same
+grammar, nothing at runtime needs to read a contract document from an
+adopter's repo. A materialized copy would only add a second source of
+truth to keep in sync with the linter — the drift the single-repo design
+exists to prevent. A generic, linter-only adopter (no curate/dispatch
+plugins) relies on the kernel's documentation and the linter's error
+messages; the scaffolder (§ 9) may write an optional human-readable
+reference for that case, but no adopter requires one.
 
 ## 9. Scaffolder
 
 *Status: not started*
 
 The kernel provides a scaffolder — a Claude Code plugin command — that
-materializes the contract and a CI caller workflow into an adopter repo.
-Running it writes the governance file skeletons, the materialized
-CONVENTIONS.md with its `contracts-version` marker, and a caller workflow
-referencing this repo's `governance-lint.yml` at the matching major
-version. The scaffolder is idempotent: it skips files that already exist
-and warns rather than overwrites.
+wires an adopter repo up to the kernel. Running it writes the governance
+file skeletons and a CI caller workflow referencing this repo's
+`governance-lint.yml` at the matching major version, and (for a
+governance-system adopter) declares the plugin dependency on the kernel.
+It does not materialize a contract file (§ 8). The scaffolder is
+idempotent: it skips files that already exist and warns rather than
+overwrites.
 
 Because the scaffolder and the enforcement workflow ship from the same
 repo and version, a freshly scaffolded project references a coherent
-kernel — the contract it receives, the lint it calls, and the grammar
-version it records all originate from one release.
+kernel — the CI ref it pins and the plugin dependency it declares both
+resolve to one release.
 
-**Why the scaffolder lives with the contract and lint:** scaffolding is
-the act of distributing the contract. A scaffolder in a different repo or
-at a different version could write a caller that pins a lint version
-incompatible with the contract version it materializes — the exact
-incoherence § 1 rejects. One repo, one version, removes that failure
-mode.
+**Why the scaffolder ships with the lint:** the scaffolder writes the CI
+ref that callers pin. Shipping it from the same repo and version as the
+workflow guarantees it writes a ref that exists and matches — a scaffolder
+at a different version could write a stale or mismatched ref, the exact
+incoherence § 1 rejects (and the stale-tag failure § 6 describes). One
+repo, one version, removes that failure mode.
 
-**Migration note:** the scaffolder and the canonical CONVENTIONS.md
-currently live in the symphonize repository (`commands/init.md` and
-`CONVENTIONS.md`). The end state is that the kernel owns the canonical
-versions and symphonize consumes them as one adopter among others.
-Dismantling the symphonize-side originals is a separate downstream
-change; this section establishes only that the kernel repo owns these
-artifacts.
+**Migration note:** the scaffolder currently lives in the symphonize
+repository (`commands/init.md`), and symphonize's `CONVENTIONS.md` bundles
+the structural grammar with authoring methodology and process discipline.
+The end state: the kernel owns the scaffolder and defines the structural
+grammar (through its linter and docs), while symphonize's `CONVENTIONS.md`
+is removed — its methodology moving inline into the curation commands and
+its process discipline into the dispatch commands. Dismantling the
+symphonize-side originals is a separate downstream change; this section
+establishes only that the kernel repo owns the scaffolder and the
+structural grammar.
 
 ## 10. Single-Repo, Dual Packaging
 
@@ -317,6 +315,5 @@ release-please version and one tag cover both.
 distribution channels for the same contract. Separating them by repo
 would split the kernel's version line and reintroduce the coherence
 problem § 1 solves. The two coherence mechanisms in § 6 — the `@vN` ref
-pin for the workflow and the `contracts-version` marker for materialized
-files — both originate here. The plugin `dependencies` field governs only
-the outer kernel↔plugin-consumer edge, not these in-repo artifacts.
+pin for the workflow and the plugin `dependencies` range for the
+scaffolder plugin — both originate from this one version line.
