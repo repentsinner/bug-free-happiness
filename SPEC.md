@@ -8,11 +8,10 @@ Repos lack an enforceable definition of what well-formed governance
 documents look like — SPEC.md status lines, README headings, markdown
 formatting, and cross-document traceability drift or go unchecked.
 
-bug-free-happiness is **symphonize's governance-schema** (called *the
-kernel* through the rest of this spec): the structural definition of
-symphonize's governance documents plus the CI workflow that enforces it.
-It is consumed only by symphonize — not a general-purpose linter other
-projects adopt. If symphonize ever needs a different governance-doc
+bug-free-happiness is **symphonize's governance-schema**: the structural
+definition of symphonize's governance documents plus the CI workflow that
+enforces it. It is consumed only by symphonize — not a general-purpose
+linter other projects adopt. If symphonize ever needs a different governance-doc
 schema, it would plug a different one in on its own side; that seam stays
 unbuilt until a second schema exists. The schema has three faces, released
 together on one version line:
@@ -23,7 +22,7 @@ together on one version line:
   author one — authoring is symphonize's curation methodology, not the
   schema.
 - **Scaffolder** (§ 9) — the command that wires an adopter repo up to the
-  kernel (governance skeletons plus a pinned CI caller).
+  schema (governance skeletons plus a pinned CI caller).
 - **Enforcement** (§ 2–§ 7) — the reusable workflow that validates a repo
   against the contract in CI.
 
@@ -157,11 +156,11 @@ existing mechanisms — not a bespoke marker — carry version coherence:
   the scaffolder plugin (§ 9); the plugin manager resolves and enforces
   that range.
 
-Together these pin both faces of the kernel — the CI workflow by git ref,
+Together these pin both faces of the schema — the CI workflow by git ref,
 the plugin by dependency range — to one repo's version line. No separate
 `contracts-version` marker is needed: the grammar is not shipped to
 adopters as a file (§ 8), so there is nothing to carry a marker, and the
-ref and the dependency already declare which kernel version a repo
+ref and the dependency already declare which schema version a repo
 targets.
 
 **Why this matters now:** the `spec-lint.yml → governance-lint.yml`
@@ -186,7 +185,7 @@ tag the README and scaffolding reference is governed by § 6.
 
 *Status: not started*
 
-The kernel defines the **structural contract** — the machine-checkable
+The schema is the **structural contract** — the machine-checkable
 grammar for a well-formed governance document: governance file formats,
 the `§req:`/`§spec:`/`§road:` slug rules, the status-line format, the
 cross-reference rules (§ 5), and the governance-root definition (which
@@ -195,13 +194,13 @@ directories are governance roots and how files scope to them).
 The contract is **expressed, not distributed**: it ships no document to
 adopters. It is operative in two forms — the **enforcement workflow**
 (§ 2) is its executable form (what the linter checks *is* the contract),
-and the kernel's own documentation is its human-readable form. Plugin
+and the schema's own documentation is its human-readable form. Plugin
 consumers (curate, dispatch) are built against this grammar and carry what
 they need to produce conforming documents; they do not read a contract
 file from the adopter's repo, and the linter does not either — its rules
 live in the workflow. So no per-adopter `CONVENTIONS.md` is materialized.
 
-**Scope boundary — what the contract excludes:** the kernel is
+**Scope boundary — what the contract excludes:** the schema is
 content-agnostic. The contract defines document *structure*, not
 authoring *methodology* or development *process*. How to write a good
 spec (declarative, rationale-driven, thin vertical slices), how to run
@@ -231,18 +230,18 @@ documentation.
 
 *Status: not started*
 
-The kernel provides a scaffolder — a Claude Code plugin command — that
-wires an adopter repo up to the kernel. Running it writes the governance
-file skeletons and a CI caller workflow referencing this repo's
-`governance-lint.yml` at the matching major version, and (for a
-governance-system adopter) declares the plugin dependency on the kernel.
-It does not materialize a contract file (§ 8). The scaffolder is
+bug-free-happiness provides a scaffolder — a Claude Code plugin command —
+that wires an adopter repo up to the schema. Running it writes the
+governance file skeletons and a CI caller workflow referencing this repo's
+`governance-lint.yml` at the matching major version, and declares the
+plugin dependency on the schema. It does not materialize a contract file
+(§ 8). The scaffolder is
 idempotent: it skips files that already exist and warns rather than
 overwrites.
 
 Because the scaffolder and the enforcement workflow ship from the same
 repo and version, a freshly scaffolded project references a coherent
-kernel — the CI ref it pins and the plugin dependency it declares both
+schema — the CI ref it pins and the plugin dependency it declares both
 resolve to one release.
 
 **Why the scaffolder ships with the lint:** the scaffolder writes the CI
@@ -255,20 +254,20 @@ repo, one version, removes that failure mode.
 **Migration note:** the scaffolder currently lives in the symphonize
 repository (`commands/init.md`), and symphonize's `CONVENTIONS.md` bundles
 the structural grammar with authoring methodology and process discipline.
-The end state: the kernel owns the scaffolder and defines the structural
-grammar (through its linter and docs), while symphonize's `CONVENTIONS.md`
-is removed — its methodology moving inline into the curation commands and
-its process discipline into the dispatch commands. Dismantling the
-symphonize-side originals is a separate downstream change; this section
-establishes only that the kernel repo owns the scaffolder and the
-structural grammar.
+The end state: bug-free-happiness owns the scaffolder and defines the
+structural grammar (through its linter and docs), while symphonize's
+`CONVENTIONS.md` is removed — its methodology moving inline into the
+curation commands and its process discipline into the dispatch commands.
+Dismantling the symphonize-side originals is a separate downstream change;
+this section establishes only that bug-free-happiness owns the scaffolder
+and the structural grammar.
 
 ## 10. Single-Repo, Dual Packaging
 
 *Status: not started*
 
-The kernel ships two artifact types from one repository on one version
-line:
+bug-free-happiness ships two artifact types from one repository on one
+version line:
 
 - The **reusable GitHub Actions workflow** (§ 2), consumed via
   `uses: …/governance-lint.yml@<major>` — a git-ref reference resolved by
@@ -283,7 +282,7 @@ release-please version and one tag cover both.
 
 **Why this is not two repos:** the workflow and the scaffolder are two
 distribution channels for the same contract. Separating them by repo
-would split the kernel's version line and reintroduce the coherence
+would split the schema's version line and reintroduce the coherence
 problem § 1 solves. The two coherence mechanisms in § 6 — the `@vN` ref
 pin for the workflow and the plugin `dependencies` range for the
 scaffolder plugin — both originate from this one version line.
