@@ -4,46 +4,37 @@
 
 *Status: in progress*
 
-Repos lack a shared, enforceable definition of what well-formed
-governance documents look like. SPEC.md status lines, README headings,
-markdown formatting, and cross-document traceability drift or go
-unchecked. Each repo either reimplements the rules, the validation, and
-the scaffolding, or skips them.
+Repos lack an enforceable definition of what well-formed governance
+documents look like — SPEC.md status lines, README headings, markdown
+formatting, and cross-document traceability drift or go unchecked.
 
-bug-free-happiness is the conventions kernel — the single source of truth
-a repo adopts to participate in the governance loop. It owns three faces,
-released together on one version line:
+bug-free-happiness is **symphonize's governance-schema** (called *the
+kernel* through the rest of this spec): the structural definition of
+symphonize's governance documents plus the CI workflow that enforces it.
+It is consumed only by symphonize — not a general-purpose linter other
+projects adopt. If symphonize ever needs a different governance-doc
+schema, it would plug a different one in on its own side; that seam stays
+unbuilt until a second schema exists. The schema has three faces, released
+together on one version line:
 
-- **Contract** (§ 8) — the canonical *structural* grammar: governance
-  file formats, the `§`-slug rules, the status-line format, and the
-  cross-reference rules. It defines what a well-formed governance
-  document is, not how to author one.
+- **Contract** (§ 8) — the structural grammar: governance file formats,
+  the `§`-slug rules, the status-line format, and the cross-reference
+  rules. It defines what a well-formed governance document is, not how to
+  author one — authoring is symphonize's curation methodology, not the
+  schema.
 - **Scaffolder** (§ 9) — the command that wires an adopter repo up to the
   kernel (governance skeletons plus a pinned CI caller).
 - **Enforcement** (§ 2–§ 7) — the reusable workflow that validates a repo
   against the contract in CI.
 
-It serves a spectrum of adopters from these three faces:
-
-- **Generic adopters** want documentation hygiene — markdown formatting,
-  SPEC.md status lines, README heading profiles — without any governance
-  methodology. They reference the enforcement workflow with no opt-in
-  flags; the generic core (§ 2) is all they get.
-- **Governance-system adopters** (e.g. the symphonize plugin suite) take
-  the full contract: the slug-based traceability grammar, the scaffolder,
-  and the enforcement workflow with the governance checks (§ 5) switched
-  on.
-
-**Why one repo, not a kernel split across repos:** a linter is the
-executable form of the contract — the lint rules and the grammar are one
-specification viewed two ways. Co-locating contract, scaffolder, and
-enforcement under one version makes their coherence structural: one tag
-moves all three together, so they cannot drift. Splitting them
-reintroduces a cross-repo version handshake that has already failed in
-practice — the enforcement workflow once validated numbered `## N.`
-sections while the canonical grammar had moved to slug-style headings,
-and nothing caught the divergence. The only version handshake the kernel
-keeps is the outer one, between the kernel and its plugin consumers
+**Why contract and enforcement stay together:** a linter is the
+executable form of the schema — the lint rules and the grammar are one
+specification viewed two ways. Keeping them on one version line makes
+their coherence structural: one tag moves both, so they cannot drift.
+They drifted once, when the workflow validated numbered `## N.` sections
+while the grammar had moved to slug-style headings and nothing caught it.
+The schema's only outward dependency edge is its plugin consumers —
+symphonize's curation and dispatch commands — which pin it by version
 (§ 6, § 10).
 
 ## 2. Reusable Governance Lint Workflow
@@ -54,17 +45,18 @@ The system shall provide a single reusable workflow,
 `governance-lint.yml`, that callers invoke via `workflow_call`. One job
 runs the checks in sequence; failures surface as `::error::` annotations.
 
-The always-on generic core comprises:
+The workflow runs symphonize's full schema in one job — there are no
+opt-in switches; every check runs every time:
 
-- **markdownlint** over SPEC.md, ROADMAP.md, and README.md (CHANGELOG.md
-  is excluded — see § 5).
+- **markdownlint** over SPEC.md, ROADMAP.md, README.md, and
+  REQUIREMENTS.md (CHANGELOG.md is excluded — see § 5).
 - **SPEC.md status-line validation** (§ 3).
-- **README heading validation** (§ 4), active only when `readme-type` is
-  set.
+- **README heading validation** (§ 4), active when `readme-type` is set.
+- **Traceability and prose checks** (§ 5) — slug presence, cross-reference
+  resolution, and Vale.
 
-The generic core requires no opinion beyond "this repo has governance
-documents worth keeping well-formed." It runs identically whether or not
-the opt-in governance checks (§ 5) are enabled.
+The sole input is `readme-type` (§ 4) — a README-profile selector, a
+parameter rather than a feature switch.
 
 **Why the name is `governance-lint.yml`, not `spec-lint.yml`:** the
 workflow validates the whole governance document set, not SPEC.md alone.
@@ -88,13 +80,12 @@ recognizes any `##` heading, whether the section is numbered
 (`## 1. Problem statement`) or slug-style
 (`## Problem statement §spec:problem`).
 
-**Why any heading, not numbered-only:** a numbered-only check matches
-zero sections in a slug-style SPEC.md and reports success — a false
-green. The kernel must serve both heading grammars, because the two
-audiences (§ 1) use different conventions: generic adopters number their
-sections, governance-system adopters use slug-style headings. Validating
-every `##` heading is the superset that covers both and removes the
-silent-pass failure mode.
+**Why any heading, not numbered-only:** symphonize's SPEC.md uses
+slug-style headings (`## Title §spec:slug`), not numbered sections. A
+numbered-only check matches zero sections in a slug-style SPEC.md and
+reports success — a false green, which is exactly the drift that occurred
+once (§ 1). Validating every `##` heading removes that silent-pass failure
+mode and stays robust if the heading style ever changes.
 
 ## 4. README Heading Validation
 
@@ -114,54 +105,38 @@ Required headings by type:
 - **Application:** Getting Started (synonyms: quick start, getting
   started, installation, install), Usage
 
-## 5. Opt-In Governance Checks
+## 5. Traceability and Prose Checks
 
 *Status: not started*
 
-The workflow shall expose boolean `workflow_call` inputs that enable the
-governance-system-specific checks. Each defaults to `false`, so a caller
-that sets none gets only the generic core (§ 2). The inputs:
+Beyond markdownlint, status lines, and README profiles (§ 2–§ 4), the
+schema enforces symphonize's traceability and prose rules. These run on
+every invocation — there are no opt-in switches:
 
-- **`traceability`** — enables the governance-doc-model checks (the
-  `§`-slug contract presupposes the document set, so REQUIREMENTS linting
-  rides here too):
-  - Heading-slug presence: every `##` SPEC.md heading carries a
-    `§spec:<slug>`; every `###` ROADMAP.md heading a `§road:<slug>`;
-    every `##` REQUIREMENTS.md heading a `§req:<slug>`.
-  - Cross-document reference resolution: every `§spec:`/`§road:`/`§req:`
-    reference appearing in a governance document resolves to a defined
-    heading slug. Dangling references fail the job. References inside
-    fenced code blocks and inline code spans are exempt.
-  - markdownlint over REQUIREMENTS.md (the generic core, § 2, covers
-    SPEC/ROADMAP/README; REQUIREMENTS exists only under this model).
-- **`vale`** — runs the Vale prose linter when a `.vale.ini` config
-  exists in the repo. Absent the config, the step is a no-op even when
-  the input is `true`.
+- **Slug presence:** every `##` SPEC.md heading carries a `§spec:<slug>`;
+  every `###` ROADMAP.md heading a `§road:<slug>`; every `##`
+  REQUIREMENTS.md heading a `§req:<slug>`.
+- **Cross-document reference resolution:** every `§spec:`/`§road:`/`§req:`
+  reference in a governance document resolves to a defined heading slug.
+  Dangling references fail the job. References inside fenced code blocks
+  and inline code spans are exempt.
+- **Prose:** Vale runs when a `.vale.ini` config exists; absent the
+  config the step is a no-op.
 
 CHANGELOG.md is excluded from every check. release-please generates it
 from conventional commits and regenerates it each release, so enforcing
 its structure or formatting fights the generator and is overwritten. The
-schema references CHANGELOG as the history endpoint but does not enforce
-its shape — its format is owned by release-please and the Keep a Changelog
+schema references CHANGELOG as the history endpoint but does not own its
+shape — its format belongs to release-please and the Keep a Changelog
 convention.
 
-**Why opt-in, not always-on:** the traceability contract and Vale are
-symphonize's opinion, not universal documentation hygiene. Forcing them on
-every adopter would make the workflow unusable for the generic audience
-(§ 1) and defeat the reason for extracting it. Defaulting each input to
-`false` keeps the generic core adoptable alone while letting a
-governance-system caller switch on the full contract in one place.
-
-**Why booleans, not a single mode string:** the two checks are
-independent — a repo may want prose linting (Vale) without slug
-traceability, or the reverse. Independent toggles compose; a single
-enumerated mode would force the caller to accept bundles they did not ask
-for.
-
-**Tradeoff accepted:** more inputs widen the workflow's surface and the
-matrix of states to test. The independence is worth the surface — the
-alternative is either a coarse all-or-nothing flag or a second workflow
-to maintain.
+**Why no opt-in switches:** earlier drafts made these checks toggleable to
+serve a generic doc-lint audience that wanted markdown hygiene without the
+`§`-system. That audience does not exist — the schema is symphonize's, and
+its only consumer wants every check, so toggles would be dead
+configuration. bug-free-happiness's own repo is not a symphonize-governance
+project, so it lints its own docs with plain markdownlint rather than
+calling this full-schema workflow on itself.
 
 ## 6. Version Coherence
 
@@ -226,44 +201,31 @@ they need to produce conforming documents; they do not read a contract
 file from the adopter's repo, and the linter does not either — its rules
 live in the workflow. So no per-adopter `CONVENTIONS.md` is materialized.
 
-The structural contract splits along the same line as enforcement (§ 5):
-
-- The **generic-core grammar** — status-line format and README heading
-  profiles — applies to every adopter.
-- The **traceability grammar** — the `§`-slug rules and cross-document
-  reference conventions — applies only to governance-system adopters who
-  opt in.
-
 **Scope boundary — what the contract excludes:** the kernel is
 content-agnostic. The contract defines document *structure*, not
 authoring *methodology* or development *process*. How to write a good
 spec (declarative, rationale-driven, thin vertical slices), how to run
 discovery (interview frameworks), how to compress a completed section,
 and process rules (branching, commit conventions, the quality gate) are
-the opinions of a governance *system* built on the kernel, not part of
-the kernel contract. They live in that system's own layers — for
-symphonize, its curation and dispatch commands — and a generic adopter
-never inherits them. A governance system's own conventions document
-(e.g. symphonize's `CONVENTIONS.md`) therefore bundles three contracts;
-only the structural one is the kernel's, and the kernel expresses it
-through enforcement, not a shipped document.
+the opinions of the governance *system* built on the schema, not part of
+the schema. They live in symphonize's own layers — its curation and
+dispatch commands. Symphonize's `CONVENTIONS.md` therefore bundles three
+contracts; only the structural one is the schema's, and the schema
+expresses it through enforcement, not a shipped document.
 
-**Why the kernel owns the structural contract:** the grammar and the lint
-that enforces it shall agree, and § 1 places both in this repo for that
-reason. A consumer that kept its own structural-grammar copy as the
-source of truth would recreate the drift the single-repo design exists to
-prevent. The kernel deliberately does not define methodology, because a
-generic linter cannot enforce it and a generic adopter does not want it.
+**Why the schema owns only structure:** the grammar and the lint that
+enforces it shall agree, and § 1 keeps both on one version line for that
+reason. The schema deliberately does not define methodology — a linter
+cannot enforce it, and it is symphonize's curation layer's job, not the
+schema's.
 
 **Why expressed, not distributed:** once the linter is the executable
-form of the contract and the plugin consumers are built against the same
-grammar, nothing at runtime needs to read a contract document from an
-adopter's repo. A materialized copy would only add a second source of
-truth to keep in sync with the linter — the drift the single-repo design
-exists to prevent. A generic, linter-only adopter (no curate/dispatch
-plugins) relies on the kernel's documentation and the linter's error
-messages; the scaffolder (§ 9) may write an optional human-readable
-reference for that case, but no adopter requires one.
+form of the contract and symphonize's commands are built against the same
+grammar, nothing at runtime needs to read a contract document from a
+repo. A materialized copy would only add a second source of truth to keep
+in sync with the linter — the drift the single-version design exists to
+prevent. Humans who want a written reference read the schema's own
+documentation.
 
 ## 9. Scaffolder
 
