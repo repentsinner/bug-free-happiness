@@ -148,6 +148,122 @@ does not cut a notation release.
 may add, rename or remove jobs without any adopter touching its
 ruleset, because only the summary job's name is required.
 
+## Supply chain §spec:supply-chain
+*Status: not started*
+
+An adopter pulls third-party code from its stack's package index and
+from the GitHub Actions marketplace. Both are mutable, and both have been
+compromised in the wild: in March 2025 `tj-actions/changed-files` moved
+its existing tags to a commit that printed secrets into build logs, in
+some 23,000 repositories. An advisory published after a dependency is
+adopted stays invisible until something breaks, and each repository
+wiring its own scanning by hand is the drift §spec:problem describes.
+
+This repository publishes the checks, and the system shall:
+
+- fail `quality / security` when a pull request introduces a dependency —
+  a package or an Action — with a known advisory of HIGH or CRITICAL
+  severity, naming the advisory, the affected package and the fixed
+  version;
+- fail `quality / security` when a workflow references an external Action
+  by anything other than a 40-character commit SHA followed by a
+  `# vX.Y.Z` comment. Local references (`uses: ./...`) are exempt;
+- accept a suppression only from a file the adopter tracks, each entry
+  carrying an expiry date and a one-line justification. An expired
+  suppression fails the check again;
+- report, without failing, advisories newly published against an
+  adopter's default branch, weekly, to its GitHub Security tab.
+
+An adopter shall also carry a Dependabot configuration for the
+`github-actions` ecosystem and its stack's package ecosystem, weekly,
+grouping minor and patch updates.
+
+`quality / security` is an optional class (§spec:quality-classes). An
+adopter emits it from a summary job (§spec:summary-jobs) that depends on
+the security workflow's jobs, and the ruleset template does not require it
+until every adopter emits it with real signal. The weekly audit runs
+outside the quality phase: it has no pull request to gate, only findings
+to report (§spec:pipeline-phases).
+
+**Why scanning as well as Dependabot:** Dependabot bumps an adopter's SHA
+pins and packages (§spec:stack-implementations) and raises security
+updates, but it gates nothing. A pull request can land a vulnerable
+dependency, or an Action with poor hygiene and no advisory yet, before
+Dependabot has anything to say. Scanning gates introduction; Dependabot
+handles response.
+
+**Why osv-scanner:** one tool reads OSV.dev, which federates GitHub
+Security Advisories, PyPA and pub advisories, and it reads both stacks'
+lockfiles, `uv.lock` and `pubspec.lock`. One tool means one severity scale
+and one suppression file, `osv-scanner.toml`, whose ignore entries take an
+expiry. `actions/dependency-review-action` runs beside it on pull
+requests to show the dependency delta in the review UI; it adds a view of
+what changed and does not replace the gate over the whole closure.
+**Tradeoff accepted:** osv-scanner reads workflow `uses:` references only
+through its experimental GitHub Actions extractor, so Action advisories
+rest on a plugin that may change. The pin-shape check does not depend on
+it.
+
+**Why block at HIGH:** package and Action ecosystems accumulate LOW and
+MEDIUM advisories continuously. Gating on them fails pull requests for
+reasons their authors did not touch and teaches reviewers to ignore the
+gate. CVSS HIGH and CRITICAL cover remote code execution, privilege
+escalation and credential exposure, which are worth blocking a merge for.
+The threshold is the workflow's, one value for every adopter, and the
+weekly audit reads the same value.
+
+**Why SHA pins as well as scanning:** an Action's tag is mutable. A
+maintainer, or a stolen account, can force-push `v4.2.2`, and every
+workflow pinned to it runs different code on its next run; package indexes
+refuse a republished version, and the Actions marketplace does not. A SHA
+pin makes the workflow file its own lockfile. Scanning catches a known
+advisory; a pin catches the structural defect before any advisory exists,
+runs offline, and fails on the pull request that introduced it. GitHub's
+immutable releases freeze point-release tags where a maintainer opts in,
+but floating major tags stay mutable, so pins remain the durable defence.
+The version comment is required because a 40-character hash tells a
+reviewer nothing about whether a bump is plausible.
+
+**Why suppressions expire:** a suppression justified by "the vulnerable
+path is unreachable here" stops being true after a refactor, and a
+permanent entry never says so. An expiry forces a recheck on a date the
+reviewer chose.
+
+**Why a weekly audit as well as the gate:** most advisories affecting a
+repository are published after the dependency merged, which a
+pull-request gate never sees.
+
+**Why a Scorecard self-audit, and as a template:** `ossf/scorecard-action`
+asks whether the adopting repository is itself hardened — token
+permissions, pinned dependencies, branch protection — which is a
+different question from whether its dependencies are vulnerable. It
+reports to the Security tab and gates nothing. Publishing its results
+constrains the calling workflow itself: no workflow-level environment or
+write permissions, and only an approved list of steps. A reusable call is
+not documented as supported, so this repository publishes the workflow as
+a file an adopter copies.
+
+**Constraints:**
+
+- The pull-request scan runs in parallel with an adopter's other quality
+  jobs and completes within 30 seconds.
+- Every scanner and feed is free: OSV.dev, GitHub Security Advisories,
+  OpenSSF Scorecard and Dependabot. **Rejected —** Snyk, Socket.dev and
+  Mend.io, on cost.
+- A failure names an advisory ID (`GHSA-…` or `CVE-…`), the affected
+  package and the fixed version. A failure that says only that something
+  is vulnerable is rejected.
+
+**Scope boundaries:**
+
+- System packages a workflow installs with `apt-get` or `brew` belong to
+  the runner image's maintainer.
+- Code no package index serves — a vendored SDK, a host-installed runtime
+  library — has no advisory feed and stays the adopter's concern.
+- Release integrity — immutable releases, published only once every
+  artifact is attached — belongs to the release, build and publish phases
+  (§spec:pipeline-phases), which Flywheel and each adopter own.
+
 ## Release automation §spec:release-automation
 *Status: not started*
 
