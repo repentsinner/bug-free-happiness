@@ -1,23 +1,5 @@
 # bug-free-happiness — Roadmap
 
-## Release with Flywheel §road:release-with-flywheel
-
-### Apply the template to this repository §road:apply-template-here
-
-Replace this repository's rulesets with `rulesets/` for the owner's App,
-and delete the `RELEASE_PLEASE_PAT` secret. §spec:ruleset-template
-§spec:release-automation §spec:pipeline-phases. Maintainer action: an
-agent's token cannot change rulesets or secrets.
-
-**Verify:** Confirm the live rulesets match `rulesets/` in name,
-parameters and check sources. Merge a `fix:` PR: confirm the Flywheel
-App posts `flywheel/conventional-commit`, the PR merges once all three
-required checks pass, and Flywheel pushes a release commit and the next
-`v<version>` tag after `v0.1.3`. Confirm `v0` and `v1` still point at
-their earlier commits, and that force-pushing a `v*` tag is rejected.
-Confirm a Dependabot PR satisfies the App-pinned
-`flywheel/conventional-commit` check.
-
 ## Python correctness workflow §road:python-correctness
 
 ### Publish the Python correctness workflow §road:python-correctness-workflow
@@ -109,7 +91,8 @@ an advisory ID, the package and the fixed version — with
 `quality / security` green because each outcome matched. Add an expired
 suppression to the passing fixture's `osv-scanner.toml`, and confirm
 `quality / security` fails. Within a week of §road:dependabot-here
-merging, confirm Dependabot opens a grouped PR bumping a SHA pin.
+merging, confirm Dependabot opens a grouped PR bumping a SHA pin, and
+that the Flywheel App's `flywheel/conventional-commit` check passes on it.
 
 ## Supply-chain reports §road:supply-chain-reports
 
@@ -147,7 +130,8 @@ open issues.
 
 Audit, then apply, `rulesets/` to one Flywheel-managed Python adopter
 whose summary jobs depend on the Python correctness workflow.
-§spec:ruleset-application §spec:pipeline-phases §spec:problem. Depends on
+§spec:ruleset-application §spec:ruleset-template §spec:pipeline-phases
+§spec:problem. Depends on
 §road:python-fixtures. Blocked — Flywheel's `apply-rulesets.sh` lacks the
 changes in §road:flywheel-apply-requests. Unblocked when Flywheel
 releases them.
