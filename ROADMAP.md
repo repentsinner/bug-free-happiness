@@ -6,14 +6,14 @@
 
 Add `rulesets/render.sh`, which writes the repository or organization
 variant of each ruleset in `rulesets/` to a given directory with the App
-ID substituted, the organization variant adding the `quality-contract`
+ID substituted, the organization variant adding the `bug-free-happiness`
 = `v1` repository-property condition, and document it in
 `rulesets/README.md`. §spec:ruleset-levels §spec:ruleset-application.
 
 ### Create the organization rulesets §road:create-org-rulesets
 
 In one organization on a plan with organization rulesets, define the
-single-select `quality-contract` custom property with the value `v1`,
+single-select `bug-free-happiness` custom property with the value `v1`,
 and create the four rulesets from the organization variant, targeting
 no repository yet. §spec:ruleset-levels §spec:ruleset-application.
 Depends on §road:render-ruleset-levels. Maintainer action: an agent's
@@ -21,7 +21,7 @@ token cannot change organization settings.
 
 ### Adopt one repository at organization level §road:adopt-org-repository
 
-Set `quality-contract` to `v1` on one Flywheel-managed repository that
+Set `bug-free-happiness` to `v1` on one Flywheel-managed repository that
 already emits the summary jobs, then delete its repository-level
 rulesets and confirm it has no classic branch protection.
 §spec:ruleset-levels §spec:ruleset-template §spec:problem. Depends on
