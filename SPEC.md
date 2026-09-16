@@ -11,7 +11,7 @@ lives in symphonize's notation plugin (symphonize SPEC, "Plugin
 decomposition").
 
 ## Problem §spec:problem
-*Status: not started*
+*Status: in progress*
 
 One maintainer runs many repositories across a user account and
 several organizations. Each repository's rulesets were copied by hand
@@ -34,7 +34,7 @@ unchanged, except for the owner's Flywheel App. Repositories differ
 only in what runs behind a fixed set of check names.
 
 ## Pipeline phases §spec:pipeline-phases
-*Status: not started*
+*Status: in progress*
 
 A change moves through four phases:
 
@@ -86,7 +86,7 @@ which is the failure §spec:problem describes.
 adopter twice — once to emit it, once to reapply the ruleset.
 
 ## Summary jobs §spec:summary-jobs
-*Status: in progress*
+*Status: complete*
 
 An adopting repository emits each required class from exactly one
 summary job whose display name is the class's check name. The summary
@@ -129,9 +129,9 @@ summary job depends on its stack workflow's jobs and on any jobs the
 repository adds for itself. symphonize's reusable governance lint
 implements `quality / governance`.
 
-Stack workflows are versioned with release-please under a floating
-major tag. Adopters pin a commit SHA with the version as a trailing
-comment, and Dependabot proposes each bump.
+Each release of this repository is a `v<version>` tag
+(§spec:release-automation). Adopters pin a commit SHA with the version
+as a trailing comment, and Dependabot proposes each bump. No tag floats.
 
 **Why a public repository:** adopters span owners, and GitHub shares a
 private repository's reusable workflows only with repositories of the
@@ -148,35 +148,90 @@ does not cut a notation release.
 may add, rename or remove jobs without any adopter touching its
 ruleset, because only the summary job's name is required.
 
-## Ruleset template §spec:ruleset-template
+## Release automation §spec:release-automation
 *Status: not started*
+
+This repository releases with Flywheel and carries the full ruleset
+template (§spec:ruleset-template), so it adopts everything it publishes.
+A merge that warrants a release produces a semantic-release version and
+a `v<version>` tag continuing the existing tag sequence. The `v0` and
+`v1` tags that release-please once moved stay where they are and receive
+no further updates.
+
+**Why Flywheel:** the template requires `flywheel/conventional-commit`
+and lists the Flywheel App as a bypass actor. A repository on another
+release tool can carry only part of the template, which would leave the
+contract unexercised in the one repository that defines it.
+
+**Why no floating major tag:** Flywheel moves no floating tag, and the
+template's tag namespace ruleset forbids the force push that moving one
+takes. Adopters pin commit SHAs, which Dependabot bumps, so a floating
+tag serves no adopter.
+
+**Tradeoff accepted:** a caller still pinned to `@v0` or `@v1` receives
+no updates and keeps the governance-schema workflow those tags name.
+
+**Scope boundary:** symphonize stays on release-please. It tags each
+plugin separately, and Flywheel scopes tag prefixes to release streams,
+not packages.
+
+**Rejected — release-please with a partial template:** the
+conventional-commit check and the App bypass would go untested in the
+repository that publishes them.
+
+## Ruleset template §spec:ruleset-template
+*Status: in progress*
 
 Every adopter carries the same four rulesets:
 
 | Ruleset | Targets | Rules | Bypass |
 |---|---|---|---|
 | Loss prevention | default branch | no deletion, no force push | none |
-| Review | default branch | pull request with zero approvals; required checks `flywheel/conventional-commit`, `quality / governance`, `quality / correctness`, from any source, not strict | Flywheel App |
+| Review | default branch | pull request with zero approvals; required checks `flywheel/conventional-commit` from the Flywheel App, and `quality / governance` and `quality / correctness` from GitHub Actions; not strict | Flywheel App |
 | Tag namespace | `v*`, `*/v*` tags | no deletion, no force push | Flywheel App |
 | Required signatures | default branch | signed commits | Flywheel App |
 
-The owner's Flywheel App ID is the template's only variable. A
+Ruleset names are exact, because application matches rulesets by name
+(§spec:ruleset-application). Each ruleset sets every parameter GitHub
+exposes, including preview options such as the extra approval for
+unattributed Copilot pull requests.
+
+The owner's Flywheel App ID is the template's only variable: it names
+the bypass actor and the source of `flywheel/conventional-commit`. A
 multi-stream repository also targets its Flywheel-managed branches,
-read from its `.flywheel.yml`, beside the default branch.
+read from its `.flywheel.yml`, beside the default branch. Each adopter
+stores the App's private key in both its Actions and its Dependabot
+secret stores.
 
 **Why the App ID varies:** Flywheel requires each adopter to create a
 private App of its own (Flywheel ADR 0002), so each owner's App has a
 different ID.
 
-**Why any source:** when the App key is unavailable, as on a Dependabot
-pull request without a Dependabot-store copy of the key, Flywheel posts
-`flywheel/conventional-commit` with the workflow token. A check pinned
-to the App rejects that post and blocks the pull request indefinitely.
+**Why pinned sources:** a required check from any source also accepts a
+commit status. Anyone with status write access can post a successful
+status under a required name, and the ruleset passes without the check
+running and without a trace in the pull request's diff. Pinning each
+check to the integration that produces it closes that route. It narrows
+the gap rather than closing it: a workflow on another branch can still
+post a check run under a required name with its token, which takes
+write access and leaves a workflow file behind.
 
-**Security tradeoff of any source:** a collaborator with write access
-could add a job that reports a required name and always passes. That
-job appears in the pull request diff, where review catches it. Pull
-requests from forks receive a read-only token and cannot post checks.
+**Why GitHub Actions for the quality checks:** summary jobs run in
+Actions, and the Actions integration has one ID for every owner, so the
+pin adds no variable.
+
+**Why the Dependabot secret:** a Dependabot-triggered run reads the
+Dependabot secret store, not the Actions store. Without the App key
+there, Flywheel posts `flywheel/conventional-commit` with the workflow
+token, the App-pinned check rejects it, and the pull request stays
+blocked. **Tradeoff accepted:** a repository missing that secret blocks
+its Dependabot pull requests. That failure is visible; a forged status
+is not.
+
+**Why every parameter explicitly:** GitHub adds ruleset parameters on
+its side, with defaults of its choosing. A template that omits one
+inherits whatever default applied when each repository's ruleset was
+created, which is drift the template cannot see.
 
 **Why the default branch by alias:** `~DEFAULT_BRANCH` holds for a
 repository whose default branch is not `main`, so the template needs no
@@ -203,8 +258,8 @@ script needs five changes first, raised upstream:
 
 - `--required-checks` extends the default `flywheel/conventional-commit`
   rather than replacing it, as the script's own usage text describes.
-- Required checks and targets come from a file, so every adopter reads
-  one list.
+- Required checks with their sources, and targets, come from a file,
+  so every adopter reads one list.
 - Targets include `~DEFAULT_BRANCH`.
 - A required-signatures ruleset is part of the applied set.
 - An audit mode compares live rulesets against the file.
