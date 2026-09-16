@@ -1,27 +1,12 @@
 # bug-free-happiness — Roadmap
 
-## Summary jobs on this repository §road:dogfood-summary-jobs
-
-### Require the summary checks on this repository §road:require-summary-checks
-
-Add a review ruleset on the default branch requiring `quality / governance`
-and `quality / correctness` from any source. §spec:ruleset-template
-§spec:problem. Maintainer action: an agent's token cannot change
-repository settings.
-
-**Verify:** Open a PR that breaks a workflow file so actionlint fails.
-Confirm the checks list shows `quality / correctness` failing under that
-exact name, and the merge box reports it as a required check blocking
-merge. Fix the file, and confirm both `quality / governance` and
-`quality / correctness` pass and the PR becomes mergeable.
-
 ## Python correctness workflow §road:python-correctness
 
 ### Publish the Python correctness workflow §road:python-correctness-workflow
 
 Add reusable `.github/workflows/python-correctness.yml` that runs a uv
 project's linter, format check, type checker and tests.
-§spec:stack-implementations. Depends on §road:require-summary-checks.
+§spec:stack-implementations.
 
 ### Self-test against Python fixtures §road:python-fixtures
 
@@ -42,7 +27,7 @@ blocks merge.
 
 Add reusable `.github/workflows/flutter-correctness.yml` that runs a Dart
 or Flutter project's analyzer, format check and tests.
-§spec:stack-implementations. Depends on §road:require-summary-checks.
+§spec:stack-implementations.
 
 ### Self-test against Flutter fixtures §road:flutter-fixtures
 
@@ -62,8 +47,7 @@ fails and blocks merge.
 ### Publish the ruleset template §road:publish-ruleset-template
 
 Add the four rulesets as JSON under `rulesets/`, with the Flywheel App ID
-as the one placeholder. §spec:ruleset-template. Depends on
-§road:require-summary-checks.
+as the one placeholder. §spec:ruleset-template.
 
 ### Draft Flywheel's ruleset-application requests §road:flywheel-apply-requests
 
