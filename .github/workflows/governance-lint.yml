@@ -30,7 +30,6 @@ jobs:
         run: |
           if [ ! -f SPEC.md ]; then
             echo "No SPEC.md found — skipping status check"
-            echo $GITHUB_WORKSPACE
             exit 0
           fi
 
