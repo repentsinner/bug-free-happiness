@@ -265,7 +265,7 @@ a file an adopter copies.
   (§spec:pipeline-phases), which Flywheel and each adopter own.
 
 ## Release automation §spec:release-automation
-*Status: not started*
+*Status: in progress*
 
 This repository releases with Flywheel and carries the full ruleset
 template (§spec:ruleset-template), so it adopts everything it publishes.
