@@ -1,0 +1,21 @@
+{
+  "name": "Required signatures",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "required_signatures" }
+  ],
+  "bypass_actors": [
+    {
+      "actor_id": "${FLYWHEEL_APP_ID}",
+      "actor_type": "Integration",
+      "bypass_mode": "always"
+    }
+  ]
+}
