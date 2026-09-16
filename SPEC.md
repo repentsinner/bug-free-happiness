@@ -57,7 +57,7 @@ quality workflow templates from its scope (Flywheel non-goal NG1). The
 quality phase needs an owner outside it.
 
 ## Quality classes §spec:quality-classes
-*Status: not started*
+*Status: in progress*
 
 Every required quality check is named `quality / <class>`. The ruleset
 template (§spec:ruleset-template) requires two classes:
@@ -86,7 +86,7 @@ which is the failure §spec:problem describes.
 adopter twice — once to emit it, once to reapply the ruleset.
 
 ## Summary jobs §spec:summary-jobs
-*Status: not started*
+*Status: in progress*
 
 An adopting repository emits each required class from exactly one
 summary job whose display name is the class's check name. The summary
@@ -121,7 +121,7 @@ workflow to pass, but only in an organization ruleset, which a user
 account cannot have (§spec:ruleset-template).
 
 ## Stack implementations §spec:stack-implementations
-*Status: not started*
+*Status: in progress*
 
 This repository publishes a reusable correctness workflow per stack:
 Python, and Dart with Flutter. An adopter's `quality / correctness`

@@ -2,25 +2,12 @@
 
 ## Summary jobs on this repository §road:dogfood-summary-jobs
 
-### Lint governance with symphonize's workflow §road:adopt-symphonize-governance
-
-Point `.github/workflows/ci.yml` at symphonize's reusable governance lint,
-pinned by commit SHA, in place of this repository's own
-`governance-lint.yml`. §spec:stack-implementations
-
-### Emit the quality summary jobs §road:emit-summary-jobs
-
-Add `.github/workflows/quality.yml` with `quality / governance` and
-`quality / correctness` summary jobs, the latter depending on actionlint
-and shellcheck over this repository's workflows. §spec:summary-jobs
-§spec:quality-classes. Depends on §road:adopt-symphonize-governance.
-
 ### Require the summary checks on this repository §road:require-summary-checks
 
 Add a review ruleset on the default branch requiring `quality / governance`
 and `quality / correctness` from any source. §spec:ruleset-template
-§spec:problem. Depends on §road:emit-summary-jobs. Maintainer action: an
-agent's token cannot change repository settings.
+§spec:problem. Maintainer action: an agent's token cannot change
+repository settings.
 
 **Verify:** Open a PR that breaks a workflow file so actionlint fails.
 Confirm the checks list shows `quality / correctness` failing under that
@@ -106,8 +93,7 @@ and confirm it cannot auto-merge.
 
 Delete `.github/workflows/governance-lint.yml` and rewrite `README.md` to
 document the quality classes, summary jobs, stack workflows and ruleset
-template. §spec:quality-classes §spec:stack-implementations. Depends on
-§road:adopt-symphonize-governance.
+template. §spec:quality-classes §spec:stack-implementations.
 
 **Verify:** Confirm `.github/workflows/` holds no `governance-lint.yml`,
 and that a caller pinned to `@v1` still resolves, because the tag does
