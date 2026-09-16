@@ -10,8 +10,6 @@
 
 * **rulesets:** publish the ruleset template ([91c1445](https://github.com/repentsinner/bug-free-happiness/commit/91c144530a1480f5536c51db8b0ed796f82548be))
 
-# Changelog
-
 ## [0.1.3](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.2...v0.1.3) (2026-02-27)
 
 
