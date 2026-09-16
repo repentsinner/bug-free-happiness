@@ -1,72 +1,115 @@
 # bug-free-happiness — Roadmap
 
-Build the not-started sections of SPEC.md into the full governance-schema:
-the enforcement workflow (§ 2, § 3, § 5, § 6), plugin packaging (§ 10), and
-the scaffolder (§ 9). §4 and §7 are complete. §8 (the contract) is
-*expressed* by the enforcement workflow, not built separately — completing
-the enforcement workstreams realizes it.
+## Summary jobs on this repository §road:dogfood-summary-jobs
 
-Sections are in build-dependency order. bug-free-happiness uses plain
-numbered SPEC sections and lints its own docs with plain markdownlint, so
-this roadmap cites spec sections by number and omits the `§`-slug
-machinery.
+### Lint governance with symphonize's workflow §road:adopt-symphonize-governance
 
-## Fix workflow naming and version coherence
+Point `.github/workflows/ci.yml` at symphonize's reusable governance lint,
+pinned by commit SHA, in place of this repository's own
+`governance-lint.yml`. §spec:stack-implementations
 
-Update README.md and any self-references to pin `governance-lint.yml@v0` —
-the workflow's real name and published major — instead of the stale
-`spec-lint.yml@v1`, and make the floating major tag track the published
-release. § 2, § 6. Foundational: the workflow must be correctly
-referenceable before symphonize consumes it.
+### Emit the quality summary jobs §road:emit-summary-jobs
 
-**Verify:** a caller pinning `governance-lint.yml@v0` resolves the current
-workflow; `grep -ri spec-lint .` finds no live references (CHANGELOG
-history may retain them); the floating major tag points at the latest
-release, not a pre-rename commit.
+Add `.github/workflows/quality.yml` with `quality / governance` and
+`quality / correctness` summary jobs, the latter depending on actionlint
+and shellcheck over this repository's workflows. §spec:summary-jobs
+§spec:quality-classes. Depends on §road:adopt-symphonize-governance.
 
-## Validate status lines on any heading
+### Require the summary checks on this repository §road:require-summary-checks
 
-Change the status-line validator in `governance-lint.yml` from
-numbered-only (`## N.`) to any `##` heading. § 3.
+Add a review ruleset on the default branch requiring `quality / governance`
+and `quality / correctness` from any source. §spec:ruleset-template
+§spec:problem. Depends on §road:emit-summary-jobs. Maintainer action: an
+agent's token cannot change repository settings.
 
-**Verify:** a slug-style SPEC.md has every `##` section's status line
-checked — a section missing one fails the job — while bug-free-happiness's
-own numbered SPEC.md still passes.
+**Verify:** Open a PR that breaks a workflow file so actionlint fails.
+Confirm the checks list shows `quality / correctness` failing under that
+exact name, and the merge box reports it as a required check blocking
+merge. Fix the file, and confirm both `quality / governance` and
+`quality / correctness` pass and the PR becomes mergeable.
 
-## Add traceability and prose checks
+## Python correctness workflow §road:python-correctness
 
-Port from symphonize's `governance-lint.yml`: `§spec`/`§road`/`§req`
-heading-slug presence, cross-document reference resolution (fenced-code
-and inline-code exempt), markdownlint over REQUIREMENTS.md, and the Vale
-step (active when `.vale.ini` exists). These run on every invocation, no
-toggles. § 5.
+### Publish the Python correctness workflow §road:python-correctness-workflow
 
-**Verify:** a repo whose SPEC.md cites a `§spec:` slug that no heading
-defines fails with a dangling-reference error; a repo with `.vale.ini`
-has its SPEC/REQUIREMENTS prose linted; a repo without `.vale.ini` skips
-Vale without error.
+Add reusable `.github/workflows/python-correctness.yml` that runs a uv
+project's linter, format check, type checker and tests.
+§spec:stack-implementations. Depends on §road:require-summary-checks.
 
-## Package bug-free-happiness as a plugin
+### Self-test against Python fixtures §road:python-fixtures
 
-Add a `.claude-plugin/plugin.json` manifest and marketplace entry so the
-scaffolder ships as a Claude Code plugin alongside the reusable workflow,
-on one release-please version line. § 10. Prerequisite for the scaffolder
-and for symphonize declaring a plugin dependency on the schema.
+Add a passing and a failing uv project under `tests/fixtures/python/`,
+and make `quality / correctness` in `.github/workflows/quality.yml`
+depend on calls that expect each outcome. §spec:stack-implementations
+§spec:summary-jobs. Depends on §road:python-correctness-workflow.
 
-**Verify:** `plugin.json` validates; bug-free-happiness installs from its
-marketplace; the installed plugin and the workflow tag carry the same
-version.
+**Verify:** On a PR, confirm the checks list shows the Python workflow
+passing on the passing fixture and failing on the failing fixture, with
+`quality / correctness` green because each outcome matched. Break the
+passing fixture's test, and confirm `quality / correctness` fails and
+blocks merge.
 
-## Build the scaffolder command
+## Dart and Flutter correctness workflow §road:flutter-correctness
 
-Adapt symphonize's `commands/init.md` into a bug-free-happiness scaffolder
-plugin command that writes the governance-file skeletons, a CI caller
-referencing `governance-lint.yml@v0`, and a declared plugin dependency on
-bug-free-happiness; idempotent (skips existing files, warns rather than
-overwrites). § 9. Depends on "Fix workflow naming and version coherence"
-(a correct ref to pin) and "Package bug-free-happiness as a plugin".
+### Publish the Flutter correctness workflow §road:flutter-correctness-workflow
 
-**Verify:** running the scaffolder in a fresh repo writes the
-SPEC/ROADMAP/CHANGELOG skeletons and a `governance-lint.yml` caller pinned
-to a major that resolves; re-running skips existing files and warns; the
-scaffolded repo's CI passes against the workflow.
+Add reusable `.github/workflows/flutter-correctness.yml` that runs a Dart
+or Flutter project's analyzer, format check and tests.
+§spec:stack-implementations. Depends on §road:require-summary-checks.
+
+### Self-test against Flutter fixtures §road:flutter-fixtures
+
+Add a passing and a failing Flutter project under
+`tests/fixtures/flutter/`, and make `quality / correctness` depend on
+calls that expect each outcome. §spec:stack-implementations
+§spec:summary-jobs. Depends on §road:flutter-correctness-workflow.
+
+**Verify:** On a PR, confirm the checks list shows the Flutter workflow
+passing on the passing fixture and failing on the failing fixture, with
+`quality / correctness` green because each outcome matched. Break the
+passing fixture's analyzer check, and confirm `quality / correctness`
+fails and blocks merge.
+
+## Ruleset template §road:ruleset-template
+
+### Publish the ruleset template §road:publish-ruleset-template
+
+Add the four rulesets as JSON under `rulesets/`, with the Flywheel App ID
+as the one placeholder. §spec:ruleset-template. Depends on
+§road:require-summary-checks.
+
+### Draft Flywheel's ruleset-application requests §road:flywheel-apply-requests
+
+Write the five `apply-rulesets.sh` change requests to
+`docs/upstream/flywheel.md` for the maintainer to file.
+§spec:ruleset-application. Maintainer action: an agent's token cannot
+open issues.
+
+### Apply the template to a pilot adopter §road:pilot-ruleset-apply
+
+Audit, then apply, `rulesets/` to one Flywheel-managed Python adopter
+whose summary jobs depend on the Python correctness workflow.
+§spec:ruleset-application §spec:pipeline-phases. Depends on
+§road:publish-ruleset-template and §road:python-fixtures. Blocked —
+Flywheel's `apply-rulesets.sh` lacks the changes in
+§road:flywheel-apply-requests. Unblocked when Flywheel releases them.
+
+**Verify:** Run the audit against the pilot before applying, and confirm
+it lists every difference from `rulesets/`. Apply, rerun the audit, and
+confirm it reports no drift. Confirm a Dependabot PR in the pilot
+satisfies `flywheel/conventional-commit`. Open a PR whose test fails,
+and confirm it cannot auto-merge.
+
+## Retire the governance-schema workflow §road:retire-schema-workflow
+
+### Remove the old workflow and rewrite the README §road:rewrite-readme
+
+Delete `.github/workflows/governance-lint.yml` and rewrite `README.md` to
+document the quality classes, summary jobs, stack workflows and ruleset
+template. §spec:quality-classes §spec:stack-implementations. Depends on
+§road:adopt-symphonize-governance.
+
+**Verify:** Confirm `.github/workflows/` holds no `governance-lint.yml`,
+and that a caller pinned to `@v1` still resolves, because the tag does
+not move. Follow the README in a scratch repository to add summary jobs,
+and confirm both required checks report under their exact names.
