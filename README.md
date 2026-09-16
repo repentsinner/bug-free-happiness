@@ -1,74 +1,99 @@
 # bug-free-happiness
 
-Reusable GitHub Actions workflows for documentation quality enforcement.
+The shared quality phase for Flywheel-managed repositories: fixed
+required-check names, the summary jobs that emit them, per-stack
+correctness workflows, and one ruleset template that every repository
+applies unchanged.
+
+Design and rationale live in [SPEC.md](SPEC.md). Remaining work lives in
+[ROADMAP.md](ROADMAP.md).
+
+## Where it sits
+
+| Layer | Owner | Provides |
+| --- | --- | --- |
+| Release | Flywheel | versioning, auto-merge, `flywheel/conventional-commit` |
+| Quality contract | this repository | `quality / <class>` names, summary jobs, correctness workflows, ruleset template |
+| Governance | symphonize | the reusable governance lint behind `quality / governance` |
+
+Only the quality phase gates a merge. Build and publish run after
+release, where a branch ruleset has nothing to block
+(§spec:pipeline-phases, §spec:stack-implementations).
+
+## What it is not
+
+- **Not part of Flywheel.** Flywheel leaves quality checks to adopters,
+  so this contract lives outside it (§spec:pipeline-phases).
+- **Not the governance-document schema.** That moved to symphonize, whose
+  reusable governance lint replaces the schema workflow the `v0` and `v1`
+  tags here still name (§spec:release-automation).
+
+## Required checks
+
+| Check | Passes when | Source |
+| --- | --- | --- |
+| `flywheel/conventional-commit` | the PR title is a conventional commit | the owner's Flywheel App |
+| `quality / governance` | governance documents conform and markdown lints clean | GitHub Actions |
+| `quality / correctness` | the change builds, static analysis passes, and tests pass | GitHub Actions |
+
+Each source is pinned. A check that accepts any source also accepts a
+commit status, which anyone with status write access can post without
+running anything (§spec:quality-classes, §spec:ruleset-template).
 
 ## Installation
 
-Add a caller workflow to your repo (e.g. `.github/workflows/spec-lint.yml`):
-
-```yaml
-name: Spec Lint
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  lint:
-    uses: repentsinner/bug-free-happiness/.github/workflows/spec-lint.yml@v1
-```
+Add `.github/workflows/quality.yml` to the repository, with one summary
+job per required `quality / <class>` check. Pin every action and
+reusable workflow by commit SHA with the version as a trailing comment,
+so Dependabot proposes each bump.
 
 ## Usage
 
-### Inputs
-
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `readme-type` | string | `""` | `library`, `application`, or `""` (skip) |
-
-### README heading validation
-
-Pass `readme-type` to enable heading checks:
+Each summary job depends on every job in its class, always runs, and
+fails when any of them failed or was cancelled. GitHub treats a skipped
+required check as passing, so a summary job that skips lets a broken
+change merge (§spec:summary-jobs).
 
 ```yaml
+name: quality
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
 jobs:
-  lint:
-    uses: repentsinner/bug-free-happiness/.github/workflows/spec-lint.yml@v1
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      derived_release_commit: ${{ steps.classify.outputs.derived_release_commit }}
+      promotion_pr: ${{ steps.classify.outputs.promotion_pr }}
+    steps:
+      - id: classify
+        uses: point-source/flywheel/classify@<sha> # v2.1.0
+
+  governance-lint:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: repentsinner/symphonize/.github/workflows/governance-lint.yml@<sha> # notation--v0.2.12
     with:
       readme-type: library
+
+  governance:
+    name: quality / governance
+    needs: [classify, governance-lint]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
 ```
 
-### What gets checked
-
-1. **Markdownlint** — enforced via `DavidAnson/markdownlint-cli2-action`
-2. **SPEC.md status lines** — every numbered section needs a `*Status:` line
-3. **README headings** (opt-in) — required H2 headings per project type
-
-## API
-
-### `spec-lint.yml`
-
-Reusable workflow (`workflow_call`).
-
-**Inputs:**
-
-- `readme-type` (string, optional) — heading validation profile.
-  `library` requires: Installation, Usage, API, License.
-  `application` requires: Getting Started, Usage, License.
-  Empty string skips heading validation.
-
-**Outputs:** none. Errors surface as GitHub annotations.
-
-### Heading synonym patterns
-
-| Heading | Accepted synonyms |
-|---------|-------------------|
-| License | license, licensing, licensing note |
-| Installation | installation, install, getting started, quick start |
-| Usage | usage |
-| API | api, api reference |
-| Getting Started | quick start, getting started, installation, install |
+`quality / correctness` follows the same shape over the repository's
+build, lint and test jobs. This repository's own
+[`quality.yml`](.github/workflows/quality.yml) is a complete example.
 
 ## License
 
