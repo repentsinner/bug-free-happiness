@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   auto-merge:
-    if: github.actor == 'github-actions[bot]' && contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+    if: "github.actor == 'github-actions[bot]' && contains(github.event.pull_request.labels.*.name, 'autorelease: pending')"
     runs-on: ubuntu-latest
     steps:
       - run: gh pr merge --auto --squash "$PR_URL"
