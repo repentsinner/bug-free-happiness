@@ -2,36 +2,12 @@
 
 ## Release with Flywheel §road:release-with-flywheel
 
-### Install the Flywheel App and its secrets §road:flywheel-app-secrets
-
-Install the owner's Flywheel App on this repository, and store its ID as
-the `FLYWHEEL_GH_APP_ID` variable and its private key as
-`FLYWHEEL_GH_APP_PRIVATE_KEY` in both the Actions and Dependabot secret
-stores. §spec:release-automation §spec:ruleset-template. Maintainer
-action: an agent's token cannot install Apps or write secrets.
-
-### Replace release-please with Flywheel §road:replace-release-please
-
-Add `.flywheel.yml`, `.github/workflows/flywheel-pr.yml` and
-`.github/workflows/flywheel-push.yml` from symphonize's notation Flywheel
-templates, and delete `release-please.yml`, `auto-merge-release.yml`,
-`update-major-tag.yml`, `release-please-config.json` and
-`.release-please-manifest.json`. §spec:release-automation. Depends on
-§road:flywheel-app-secrets.
-
-### Publish the ruleset template §road:publish-ruleset-template
-
-Add the four rulesets as JSON under `rulesets/`, each with its exact
-name, pinned check sources and every parameter set, and the Flywheel App
-ID as the one placeholder. §spec:ruleset-template.
-
 ### Apply the template to this repository §road:apply-template-here
 
 Replace this repository's rulesets with `rulesets/` for the owner's App,
 and delete the `RELEASE_PLEASE_PAT` secret. §spec:ruleset-template
-§spec:release-automation §spec:pipeline-phases. Depends on
-§road:replace-release-please and §road:publish-ruleset-template.
-Maintainer action: an agent's token cannot change rulesets or secrets.
+§spec:release-automation §spec:pipeline-phases. Maintainer action: an
+agent's token cannot change rulesets or secrets.
 
 **Verify:** Confirm the live rulesets match `rulesets/` in name,
 parameters and check sources. Merge a `fix:` PR: confirm the Flywheel
@@ -172,9 +148,9 @@ open issues.
 Audit, then apply, `rulesets/` to one Flywheel-managed Python adopter
 whose summary jobs depend on the Python correctness workflow.
 §spec:ruleset-application §spec:pipeline-phases §spec:problem. Depends on
-§road:publish-ruleset-template and §road:python-fixtures. Blocked —
-Flywheel's `apply-rulesets.sh` lacks the changes in
-§road:flywheel-apply-requests. Unblocked when Flywheel releases them.
+§road:python-fixtures. Blocked — Flywheel's `apply-rulesets.sh` lacks the
+changes in §road:flywheel-apply-requests. Unblocked when Flywheel
+releases them.
 
 **Verify:** Run the audit against the pilot before applying, and confirm
 it lists every difference from `rulesets/`. Apply, rerun the audit, and
