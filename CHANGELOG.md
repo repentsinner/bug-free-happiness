@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.2.0...v0.2.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **changelog:** drop the release-please title buried under the first Flywheel release ([#26](https://github.com/repentsinner/bug-free-happiness/issues/26)) ([daeb3a2](https://github.com/repentsinner/bug-free-happiness/commit/daeb3a292f6a28def08f63fae67292baac77d59f))
+
 # [0.2.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.3...v0.2.0) (2026-09-16)
 
 
