@@ -1,3 +1,15 @@
+# [0.2.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.3...v0.2.0) (2026-09-16)
+
+
+### Bug Fixes
+
+* **ci:** quote the auto-merge condition so the workflow parses ([fb7b785](https://github.com/repentsinner/bug-free-happiness/commit/fb7b78575e8f26ca784c647c5a17bbd16c3f95fc))
+
+
+### Features
+
+* **rulesets:** publish the ruleset template ([91c1445](https://github.com/repentsinner/bug-free-happiness/commit/91c144530a1480f5536c51db8b0ed796f82548be))
+
 # Changelog
 
 ## [0.1.3](https://github.com/repentsinner/bug-free-happiness/compare/v0.1.2...v0.1.3) (2026-02-27)
