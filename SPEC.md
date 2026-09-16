@@ -313,11 +313,7 @@ exposes, including preview options such as the extra approval for
 unattributed Copilot pull requests.
 
 The owner's Flywheel App ID is the template's only variable: it names
-the bypass actor and the source of `flywheel/conventional-commit`. A
-multi-stream repository also targets its Flywheel-managed branches,
-read from its `.flywheel.yml`, beside the default branch. Each adopter
-stores the App's private key in both its Actions and its Dependabot
-secret stores.
+the bypass actor and the source of `flywheel/conventional-commit`.
 
 **Why the App ID varies:** Flywheel requires each adopter to create a
 private App of its own (Flywheel ADR 0002), so each owner's App has a
@@ -353,24 +349,80 @@ created, which is drift the template cannot see.
 repository whose default branch is not `main`, so the template needs no
 per-repository branch name.
 
-**Rejected — organization rulesets:** a user account cannot have them,
-and an organization needs a Team or Enterprise plan.
-
 **Rejected — GitHub's ruleset export and import:** an export embeds the
 App's actor ID, so a file exported under one owner does not import
 correctly under another.
 
+### Organization and repository level §spec:ruleset-levels
+
+The four rulesets live at one of two levels, rendered from the same
+template:
+
+- **Organization level**, where the organization's plan allows
+  organization rulesets. The organization carries each ruleset once, and
+  each targets the repositories whose `quality-contract` custom property
+  is `v1`. Organization owners define the property; organization owners
+  and repository admins set it on a repository.
+- **Repository level**, for a user account and for an organization
+  without that plan. Each adopting repository carries its own copy.
+
+The two variants differ only in where they are created and in one added
+condition: the organization variant matches the `quality-contract`
+property beside its branch or tag targets. Rules, pinned check sources
+and the App bypass are identical.
+
+A repository shall carry no ruleset or classic branch protection that
+duplicates or predates the template. GitHub enforces every ruleset and
+classic protection that applies to a branch, and a bypass exempts an
+actor only from the ruleset that lists it. A leftover copy without the
+App bypass, or a classic protection rule, rejects Flywheel's release
+push even though the template's ruleset allows it. This repository hit
+exactly that: a classic protection rule requiring a retired check
+rejected the App's first release push.
+
+**Why a custom property:** it makes adoption a per-repository switch
+that anyone can read, in an organization where most repositories do not
+yet emit the summary jobs. Targeting every repository would block each
+one on checks it never reports. A name pattern would couple adoption to
+naming, and a hand-picked repository list would change the ruleset for
+every adopter added. A later contract version targets a new property
+value, so repositories move between versions one at a time.
+
+**Why organization level where available:** one copy per organization
+cannot drift between its repositories, and only organization owners can
+change it. Repository admins can still add stricter repository rules,
+but cannot weaken the shared ones.
+
+**Tradeoff accepted:** below GitHub Enterprise, a ruleset has no
+evaluate mode that reports what it would block without enforcing it.
+Setting the property on one repository, then confirming a pull request
+and a release there, stands in for that dry run. A
+multi-stream repository also targets its Flywheel-managed branches,
+read from its `.flywheel.yml`, beside the default branch. Each adopter
+stores the App's private key in both its Actions and its Dependabot
+secret stores.
+
 ## Ruleset application §spec:ruleset-application
 *Status: not started*
 
-Applying the template to a repository is idempotent. It creates missing
-rulesets, updates existing ones in place by name, and removes rulesets
-the template supersedes. An audit mode reports each repository whose
-live rulesets differ from the template, without changing anything.
+Applying the template is idempotent at either level
+(§spec:ruleset-levels). It creates missing rulesets, updates existing
+ones in place by name, and removes rulesets the template supersedes. At
+organization level, application also covers the `quality-contract`
+property's definition; adopting a repository then means setting that
+property on it and removing its repository-level rulesets.
 
-Flywheel's `apply-rulesets.sh` applies the template. This repository
-publishes the template as data and does not fork the tool. Flywheel's
-script needs five changes first, raised upstream:
+An audit mode reports, without changing anything:
+
+- live rulesets that differ from the template, at either level;
+- repository-level rulesets on a repository the organization rulesets
+  already cover;
+- classic branch protection on an adopting repository's default branch.
+
+At repository level, Flywheel's `apply-rulesets.sh` applies the
+template. This repository publishes the template as data and does not
+fork the tool. Flywheel's script needs five changes first, raised
+upstream:
 
 - `--required-checks` extends the default `flywheel/conventional-commit`
   rather than replacing it, as the script's own usage text describes.
@@ -378,7 +430,8 @@ script needs five changes first, raised upstream:
   so every adopter reads one list.
 - Targets include `~DEFAULT_BRANCH`.
 - A required-signatures ruleset is part of the applied set.
-- An audit mode compares live rulesets against the file.
+- An audit mode compares live rulesets against the file, and reports
+  leftover repository rulesets and classic branch protection.
 
 **Why audit separately from apply:** drift is the failure this
 repository exists to prevent. A report listing every divergent
