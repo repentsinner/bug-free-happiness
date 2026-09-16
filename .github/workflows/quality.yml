@@ -1,0 +1,16 @@
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  governance-lint:
+    uses: repentsinner/symphonize/.github/workflows/governance-lint.yml@1025d00f32bb7ffdfcddf0385be8e0935559b8c9 # notation--v0.2.12
+    with:
+      readme-type: library
