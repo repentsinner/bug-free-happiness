@@ -1,5 +1,43 @@
 # bug-free-happiness — Roadmap
 
+## Organization rulesets §road:org-rulesets
+
+### Render either ruleset level §road:render-ruleset-levels
+
+Add `rulesets/render.sh`, which writes the repository or organization
+variant of each ruleset in `rulesets/` to a given directory with the App
+ID substituted, the organization variant adding the `quality-contract`
+= `v1` repository-property condition, and document it in
+`rulesets/README.md`. §spec:ruleset-levels §spec:ruleset-application.
+
+### Create the organization rulesets §road:create-org-rulesets
+
+In one organization on a plan with organization rulesets, define the
+single-select `quality-contract` custom property with the value `v1`,
+and create the four rulesets from the organization variant, targeting
+no repository yet. §spec:ruleset-levels §spec:ruleset-application.
+Depends on §road:render-ruleset-levels. Maintainer action: an agent's
+token cannot change organization settings.
+
+### Adopt one repository at organization level §road:adopt-org-repository
+
+Set `quality-contract` to `v1` on one Flywheel-managed repository that
+already emits the summary jobs, then delete its repository-level
+rulesets and confirm it has no classic branch protection.
+§spec:ruleset-levels §spec:ruleset-template §spec:problem. Depends on
+§road:create-org-rulesets. Maintainer action: an agent's token cannot
+change repository settings.
+
+**Verify:** Confirm the repository lists no repository-level rulesets,
+its branch rules come only from the four organization rulesets, and
+classic branch protection is disabled. Compare each live organization
+ruleset against the rendered organization variant, and confirm they
+match in name, conditions, parameters, check sources and bypass actors.
+Open a PR whose `quality / correctness` dependency fails, and confirm the
+merge is blocked. Merge a `fix:` PR, and confirm Flywheel's release push
+succeeds and tags the next version. Confirm a repository without the
+property shows none of the organization rules on its default branch.
+
 ## Python correctness workflow §road:python-correctness
 
 ### Publish the Python correctness workflow §road:python-correctness-workflow
