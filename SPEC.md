@@ -313,7 +313,11 @@ exposes, including preview options such as the extra approval for
 unattributed Copilot pull requests.
 
 The owner's Flywheel App ID is the template's only variable: it names
-the bypass actor and the source of `flywheel/conventional-commit`.
+the bypass actor and the source of `flywheel/conventional-commit`. A
+multi-stream repository also targets its Flywheel-managed branches,
+read from its `.flywheel.yml`, beside the default branch. Each adopter
+stores the App's private key in both its Actions and its Dependabot
+secret stores.
 
 **Why the App ID varies:** Flywheel requires each adopter to create a
 private App of its own (Flywheel ADR 0002), so each owner's App has a
@@ -360,14 +364,15 @@ template:
 
 - **Organization level**, where the organization's plan allows
   organization rulesets. The organization carries each ruleset once, and
-  each targets the repositories whose `quality-contract` custom property
-  is `v1`. Organization owners define the property; organization owners
-  and repository admins set it on a repository.
+  each targets the repositories whose `bug-free-happiness` custom
+  property is `v1`. Organization owners define the property as a single
+  select; organization owners and repository admins set it on a
+  repository.
 - **Repository level**, for a user account and for an organization
   without that plan. Each adopting repository carries its own copy.
 
 The two variants differ only in where they are created and in one added
-condition: the organization variant matches the `quality-contract`
+condition: the organization variant matches the `bug-free-happiness`
 property beside its branch or tag targets. Rules, pinned check sources
 and the App bypass are identical.
 
@@ -385,8 +390,14 @@ that anyone can read, in an organization where most repositories do not
 yet emit the summary jobs. Targeting every repository would block each
 one on checks it never reports. A name pattern would couple adoption to
 naming, and a hand-picked repository list would change the ruleset for
-every adopter added. A later contract version targets a new property
-value, so repositories move between versions one at a time.
+every adopter added.
+
+**Why the property names this repository, and its value a major
+version:** a repository's settings then name the source of its rules. A
+breaking change to the template, such as a newly required check class,
+ships as a new major version of this repository and a new property
+value, so repositories move between versions one at a time. A single
+select, not a true/false property, is what lets two versions coexist.
 
 **Why organization level where available:** one copy per organization
 cannot drift between its repositories, and only organization owners can
@@ -396,11 +407,7 @@ but cannot weaken the shared ones.
 **Tradeoff accepted:** below GitHub Enterprise, a ruleset has no
 evaluate mode that reports what it would block without enforcing it.
 Setting the property on one repository, then confirming a pull request
-and a release there, stands in for that dry run. A
-multi-stream repository also targets its Flywheel-managed branches,
-read from its `.flywheel.yml`, beside the default branch. Each adopter
-stores the App's private key in both its Actions and its Dependabot
-secret stores.
+and a release there, stands in for that dry run.
 
 ## Ruleset application §spec:ruleset-application
 *Status: not started*
@@ -408,7 +415,7 @@ secret stores.
 Applying the template is idempotent at either level
 (§spec:ruleset-levels). It creates missing rulesets, updates existing
 ones in place by name, and removes rulesets the template supersedes. At
-organization level, application also covers the `quality-contract`
+organization level, application also covers the `bug-free-happiness`
 property's definition; adopting a repository then means setting that
 property on it and removing its repository-level rulesets.
 
