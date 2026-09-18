@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/repentsinner/bug-free-happiness/compare/v0.2.1...v0.2.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* **flywheel-pr:** keep a skipping run from cancelling the run that posts the check ([#31](https://github.com/repentsinner/bug-free-happiness/issues/31)) ([421e9e7](https://github.com/repentsinner/bug-free-happiness/commit/421e9e70086f4d96468452c73310208bd150c94b))
+
 ## [0.2.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.2.0...v0.2.1) (2026-09-16)
 
 
