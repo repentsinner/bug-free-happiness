@@ -1,0 +1,13 @@
+name: ci
+on: push
+jobs:
+  call:
+    uses: example/reusable/.github/workflows/lint.yml@0123456789abcdef0123456789abcdef01234567 # notation--v0.2.16
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567 # v7.0.1
+      - uses: ./.github/actions/local
+      - uses: example/unreleased@0123456789abcdef0123456789abcdef01234567 # main 2026-09-28
+      - name: Not a uses line
+        run: echo "uses: actions/checkout@v4"

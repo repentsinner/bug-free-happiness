@@ -1,0 +1,3 @@
+- action: example/unreleased
+  expires: 2099-12-31
+  reason: Fixture Action that publishes no release.

@@ -107,6 +107,48 @@ jobs:
           expect ungrouped 1 "minor and patch"
           [ "$mismatches" -eq 0 ]
 
+  # Same harness for the pin-shape check: its step's own script against each
+  # fixture under tests/fixtures/pin-shape/.
+  pin-shape-fixtures:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check each fixture's outcome
+        id: fixtures
+        run: |
+          check="$RUNNER_TEMP/check.sh"
+          yq '.jobs.pin-shape.steps[] | select(.id == "check") | .run' \
+            .github/workflows/security.yml > "$check"
+          [ "$(head -c 4 "$check")" != null ]
+
+          mismatches=0
+          expect() {
+            local fixture=$1 want=$2 text=$3 out status=0
+            out=$(CHECK_PATH="tests/fixtures/pin-shape/$fixture" \
+              bash --noprofile --norc -eo pipefail "$check" 2>&1) || status=1
+            if [ "$status" = "$want" ] && grep -qF -- "$text" <<< "$out"; then
+              echo "ok       $fixture"
+            else
+              echo "mismatch $fixture: exit $status, want $want and text '$text'"
+              mismatches=$((mismatches + 1))
+            fi
+            mapfile -t lines <<< "$out"
+            printf '    %s\n' "${lines[@]}"
+          }
+
+          expect pass 0 "pin shape conforms"
+          expect tag-ref 1 "ci.yml:7: actions/checkout@v4"
+          expect no-comment 1 "ci.yml:7: actions/checkout@"
+          expect major-only 1 "ci.yml:7: actions/checkout@"
+          expect unlisted 1 "example/unreleased is not listed in .github/unreleased-actions.yml"
+          expect expired 1 "unreleased-actions.yml entry for example/unreleased expired on 2000-01-01"
+          [ "$mismatches" -eq 0 ]
+
   # Self-test of python-correctness.yml: one call per fixture under
   # tests/fixtures/python/. Each failing fixture breaks exactly one check, and
   # `expect` names it, so every call passes when the workflow behaves and the
@@ -178,7 +220,7 @@ jobs:
   # Not a required check yet (§spec:supply-chain).
   security:
     name: quality / security
-    needs: [classify, dependabot-config-call, dependabot-config-fixtures]
+    needs: [classify, dependabot-config-call, dependabot-config-fixtures, pin-shape-fixtures]
     if: always()
     runs-on: ubuntu-latest
     steps:

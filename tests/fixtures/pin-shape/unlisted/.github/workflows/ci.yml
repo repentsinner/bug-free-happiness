@@ -1,0 +1,7 @@
+name: ci
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: example/unreleased@0123456789abcdef0123456789abcdef01234567 # main 2026-09-28

@@ -1,0 +1,3 @@
+- action: example/unreleased
+  expires: 2000-01-01
+  reason: Fixture entry that has expired.

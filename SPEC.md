@@ -211,7 +211,8 @@ This repository publishes the checks, and the system shall:
   version;
 - fail `quality / security` when a workflow references an external Action
   by anything other than a 40-character commit SHA followed by a
-  `# vX.Y.Z` comment. Local references (`uses: ./...`) are exempt;
+  `# vX.Y.Z` comment, or a comment naming a release tag that ends in one
+  (`# notation--v0.2.16`). Local references (`uses: ./...`) are exempt;
 - accept a suppression only from a file the adopter tracks, each entry
   carrying an expiry date and a one-line justification. An expired
   suppression fails the check again;

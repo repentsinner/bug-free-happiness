@@ -99,3 +99,92 @@ jobs:
             exit 1
           fi
           echo "$config conforms: $(tr '\n' ' ' <<< "$ecosystems")"
+
+  pin-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Fails unless every external `uses:` under .github/workflows/ pins a
+      # 40-character commit SHA followed by the release it is, as `# vX.Y.Z`
+      # or a tag ending in it (`# notation--v0.2.16`). An Action listed,
+      # unexpired, in .github/unreleased-actions.yml may carry
+      # `# <branch> <YYYY-MM-DD>` instead. Local references are exempt. yq
+      # ships on the Ubuntu runner image; its absence fails the job.
+      - name: Check the pin shape of every Action reference
+        id: check
+        env:
+          CHECK_PATH: ${{ inputs.path }}
+        run: |
+          command -v yq
+          root="${CHECK_PATH%/}"
+          today="$(date -u +%F)"
+          errors=0
+          fail() {
+            echo "::error file=$1::$2"
+            errors=$((errors + 1))
+          }
+
+          # Unexpired unreleased-Action entries, one owner/repo per line.
+          listed=
+          exceptions="$root/.github/unreleased-actions.yml"
+          if [ -f "$exceptions" ]; then
+            if ! yq '.' "$exceptions" > /dev/null; then
+              echo "::error file=$exceptions::$exceptions does not parse as YAML"
+              exit 1
+            fi
+            entries=$(yq -r '.[] | [.action, (.expires | tostring), (.reason // "")] | @tsv' "$exceptions")
+            while IFS=$'\t' read -r action expires reason; do
+              [ -n "$action" ] || continue
+              if [ -z "$reason" ]; then
+                fail "$exceptions" "$exceptions entry for $action gives no reason"
+              elif [[ ! "$expires" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; then
+                fail "$exceptions" "$exceptions entry for $action has no expiry date"
+              elif [[ "${expires:0:10}" < "$today" ]]; then
+                fail "$exceptions" "$exceptions entry for $action expired on ${expires:0:10}; pin a release if upstream now has one, or renew the entry"
+              else
+                listed+="$action"$'\n'
+              fi
+            done <<< "$entries"
+          fi
+
+          release='^([A-Za-z0-9._-]*-)?v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'
+          branch_date='^[A-Za-z0-9._/-]+ [0-9]{4}-[0-9]{2}-[0-9]{2}$'
+          shopt -s nullglob
+          files=("$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml)
+          for file in "${files[@]}"; do
+            uses=$(grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' "$file" || true)
+            while IFS=: read -r n line; do
+              [ -n "$n" ] || continue
+              value=$(sed -E 's/^[[:space:]]*(-[[:space:]]*)?uses:[[:space:]]*//' <<< "$line")
+              ref=${value%%[[:space:]]*}
+              ref=${ref//[\"\']/}
+              comment=
+              if [[ "$value" == *" # "* ]]; then
+                comment=${value#* # }
+                comment=${comment%"${comment##*[![:space:]]}"}
+              fi
+              [[ "$ref" == ./* ]] && continue
+              action=$(cut -d/ -f1-2 <<< "${ref%@*}")
+              sha=${ref##*@}
+              if [[ "$ref" != *@* || ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+                fail "$file" "$file:$n: $ref is not pinned to a 40-character commit SHA"
+              elif [[ "$comment" =~ $release ]]; then
+                :
+              elif [[ "$comment" =~ $branch_date ]]; then
+                if ! grep -qxF -- "$action" <<< "$listed"; then
+                  fail "$file" "$file:$n: $action is not listed in .github/unreleased-actions.yml, so its pin needs a # vX.Y.Z comment"
+                fi
+              else
+                fail "$file" "$file:$n: $ref needs a # vX.Y.Z comment naming the release it pins"
+              fi
+            done <<< "$uses"
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            echo "$errors pin-shape error(s)"
+            exit 1
+          fi
+          echo "pin shape conforms: ${#files[@]} workflow file(s)"
