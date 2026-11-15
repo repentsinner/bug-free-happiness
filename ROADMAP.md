@@ -86,23 +86,6 @@ caller naming it fails. §spec:stack-implementations. Depends on
 the workflow with `none` from a fixture, and confirm the job fails with
 an error naming the accepted values.
 
-## Dart and Flutter correctness check §road:flutter-correctness
-
-### Fetch private git dependencies §road:flutter-private-deps
-
-Add the `app-client-id` input and `app-private-key` secret that mint a
-read-only token for private git dependencies, as the Python workflow
-does. §spec:flutter-correctness §spec:stack-implementations.
-
-**Verify:** On a PR, confirm the checks list shows a passing call for each
-passing fixture, and for each failing fixture a call that passes because
-its `expect` names the check that failed, with `quality / correctness`
-green. Break the passing Dart fixture's formatting and confirm
-`quality / correctness` fails. Run the check script locally against the
-passing Flutter fixture and confirm it reaches the same verdict as CI.
-Remove a fixture's `.fvmrc` without setting `sdk-version` and confirm the
-check fails naming the missing SDK pin.
-
 ## Dependabot configuration check §road:dependabot-config-check
 
 ### Publish the Dependabot configuration check §road:dependabot-config-job
