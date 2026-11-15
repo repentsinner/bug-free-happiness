@@ -230,7 +230,10 @@ An adopter shall also carry a Dependabot configuration for the
 `github-actions` ecosystem and its stack's package ecosystem, at least
 weekly, grouping minor and patch updates, with a 7-day cooldown. Its
 updates commit as `chore(deps)`, a type Flywheel auto-merges, so each
-version and security update lands once the required checks pass.
+version and security update lands once the required checks pass. An
+adopter whose merges act on live systems as they land may leave `chore`
+out of its `auto_merge` types, so its updates wait for review, provided
+its `.flywheel.yml` states that reason beside the list.
 
 `quality / security` is an optional class (§spec:quality-classes). An
 adopter emits it from a summary job (§spec:summary-jobs) that depends on
@@ -261,6 +264,14 @@ outside Flywheel's auto-merge types, so a hand-written toolchain change
 typed `build` still waits for review. **Tradeoff accepted:** an adopter
 whose `quality / correctness` is thin lands updates on thin evidence, so
 strengthening that class is what keeps auto-merge safe.
+
+**Why an adopter may keep updates behind review:** where a merge runs
+against live data at once, through a schedule or a deployed trigger, a
+broken update does its damage before anyone reads it, and a plausible
+wrong result passes every check. Review is then the last gate rather
+than a soak period, so the template lets such an adopter keep it. The
+reason has to sit in `.flywheel.yml`, because an empty `auto_merge` list
+with no stated cause reads the same as one nobody configured.
 
 **Why osv-scanner:** one tool reads OSV.dev, which federates GitHub
 Security Advisories, PyPA and pub advisories, and it reads both stacks'
