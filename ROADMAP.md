@@ -103,12 +103,6 @@ run. Change the pass fixture's interval to `monthly`, and confirm
 
 ## Security class §road:security-class
 
-### Enable Dependabot here §road:dependabot-here
-
-Add `.github/dependabot.yml` for the `github-actions` ecosystem on a
-weekly cadence, grouping minor and patch updates. §spec:supply-chain
-§spec:stack-implementations.
-
 ### Publish the pin-shape check §road:pin-shape-check
 
 Add a job to `security.yml` that fails when
@@ -148,9 +142,9 @@ pin-shape job naming the offending file and line, the advisory job naming
 an advisory ID, the package and the fixed version — with
 `quality / security` green because each outcome matched. Add an expired
 suppression to the passing fixture's `osv-scanner.toml`, and confirm
-`quality / security` fails. Within a week of §road:dependabot-here
-merging, confirm Dependabot opens a grouped PR bumping a SHA pin, and
-that the Flywheel App's `flywheel/conventional-commit` check passes on it.
+`quality / security` fails. Confirm a grouped Dependabot PR bumping a
+SHA pin passes the pin-shape check, and that the Flywheel App's
+`flywheel/conventional-commit` check passes on it.
 
 ## Supply-chain reports §road:supply-chain-reports
 
