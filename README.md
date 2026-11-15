@@ -58,6 +58,8 @@ change merge (§spec:summary-jobs).
 name: quality
 
 on:
+  push:
+    branches: [main]
   pull_request:
   merge_group:
 
