@@ -1,0 +1,101 @@
+name: security
+
+# Supply-chain checks behind `quality / security` (§spec:supply-chain). An
+# adopter calls this workflow and makes its `quality / security` summary job
+# depend on the call.
+on:
+  workflow_call:
+    inputs:
+      path:
+        description: Directory to check, relative to the repository root.
+        type: string
+        default: .
+
+permissions:
+  contents: read
+
+jobs:
+  dependabot-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Fails unless the Dependabot configuration covers github-actions and
+      # the stack's package ecosystem, each at least weekly, with minor and
+      # patch updates grouped. yq ships on the Ubuntu runner image; its
+      # absence fails the job rather than skipping the checks.
+      - name: Check the Dependabot configuration
+        id: check
+        env:
+          CHECK_PATH: ${{ inputs.path }}
+        run: |
+          command -v yq
+          root="${CHECK_PATH%/}"
+
+          config=
+          for name in dependabot.yml dependabot.yaml; do
+            if [ -f "$root/.github/$name" ]; then
+              config="$root/.github/$name"
+              break
+            fi
+          done
+          if [ -z "$config" ]; then
+            echo "::error::$root/.github holds no Dependabot configuration (dependabot.yml)"
+            exit 1
+          fi
+          if ! yq '.' "$config" > /dev/null; then
+            echo "::error file=$config::$config does not parse as YAML"
+            exit 1
+          fi
+
+          errors=0
+          fail() {
+            echo "::error file=$config::$1"
+            errors=$((errors + 1))
+          }
+
+          [ "$(yq '.version' "$config")" = 2 ] || fail "version is not 2"
+
+          # The stack's ecosystem comes from the manifests the repository
+          # tracks, so build output and virtual environments do not count.
+          # Listing first, outside the loop, lets a git failure fail the job.
+          files=$(git -C "$root" ls-files --cached --others --exclude-standard)
+          python=
+          dart=
+          while IFS= read -r file; do
+            case "${file##*/}" in
+              pyproject.toml | uv.lock | setup.py | Pipfile | requirements*.txt) python=1 ;;
+              pubspec.yaml) dart=1 ;;
+            esac
+          done <<< "$files"
+
+          ecosystems=$(yq '.updates // [] | .[] | ."package-ecosystem"' "$config")
+          has() { grep -qxF -- "$1" <<< "$ecosystems"; }
+          has github-actions || fail "no updates entry for package-ecosystem github-actions"
+          if [ -n "$python" ] && ! has uv && ! has pip; then
+            fail "Python manifests found, but no updates entry for package-ecosystem uv or pip"
+          fi
+          if [ -n "$dart" ] && ! has pub; then
+            fail "pubspec.yaml found, but no updates entry for package-ecosystem pub"
+          fi
+
+          # A group without update-types takes every update type, so it
+          # groups minor and patch updates too.
+          count=$(yq '.updates // [] | length' "$config")
+          for ((i = 0; i < count; i++)); do
+            ecosystem=$(yq ".updates[$i].\"package-ecosystem\"" "$config")
+            interval=$(yq ".updates[$i].schedule.interval // \"unscheduled\"" "$config")
+            case "$interval" in
+              daily | weekly) ;;
+              *) fail "updates entry $ecosystem is $interval; schedule it daily or weekly" ;;
+            esac
+            grouped=$(yq ".updates[$i].groups // {} | to_entries | map(select(.value.\"update-types\" // [\"minor\", \"patch\"] | contains([\"minor\", \"patch\"]))) | length" "$config")
+            [ "$grouped" -gt 0 ] || fail "updates entry $ecosystem has no group that takes minor and patch updates"
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            exit 1
+          fi
+          echo "$config conforms: $(tr '\n' ' ' <<< "$ecosystems")"

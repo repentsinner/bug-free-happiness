@@ -82,6 +82,25 @@ passing on the passing fixture and failing on the failing fixture, with
 passing fixture's analyzer check, and confirm `quality / correctness`
 fails and blocks merge.
 
+## Dependabot configuration check §road:dependabot-config-check
+
+### Publish the Dependabot configuration check §road:dependabot-config-job
+
+Add reusable `.github/workflows/security.yml` with a job that fails when
+the caller's Dependabot configuration is missing, lacks an entry for
+`github-actions` or for the ecosystem of a Python or Dart manifest the
+caller tracks, schedules an entry less often than weekly, or groups
+none of an entry's minor and patch updates. Self-test it from a
+`quality / security` summary job in `.github/workflows/quality.yml`
+against fixtures under `tests/fixtures/dependabot/`.
+§spec:supply-chain §spec:summary-jobs §spec:quality-classes.
+
+**Verify:** On a PR, confirm the fixtures job reports every fixture as
+`ok`, each failing fixture's output naming its gap, and the call on the
+pass fixture and `quality / security` both pass with no failed job in the
+run. Change the pass fixture's interval to `monthly`, and confirm
+`quality / security` fails.
+
 ## Security class §road:security-class
 
 ### Enable Dependabot here §road:dependabot-here
@@ -92,11 +111,12 @@ weekly cadence, grouping minor and patch updates. §spec:supply-chain
 
 ### Publish the pin-shape check §road:pin-shape-check
 
-Add reusable `.github/workflows/security.yml` with a job that fails when
+Add a job to `security.yml` that fails when
 an external `uses:` reference under the caller's `.github/workflows/` is
 not `<owner>/<repo>@<40-hex SHA>` followed by `# vX.Y.Z`, naming each
 offending file and line. Local references are exempt, and the job adds
-no dependency. §spec:supply-chain §spec:quality-classes.
+no dependency. §spec:supply-chain §spec:quality-classes. Depends on
+§road:dependabot-config-job.
 
 ### Add the advisory gate §road:advisory-gate
 
@@ -117,9 +137,9 @@ requests, at the gate's threshold. §spec:supply-chain. Depends on
 
 Add a passing fixture and two failing ones under
 `tests/fixtures/security/` — a workflow referencing an Action by tag, and
-a lockfile pinning a package with a known HIGH advisory — and add a
-`quality / security` summary job to `.github/workflows/quality.yml` that
-depends on calls expecting each outcome. §spec:supply-chain
+a lockfile pinning a package with a known HIGH advisory — and make the
+`quality / security` summary job in `.github/workflows/quality.yml` also
+depend on calls expecting each outcome. §spec:supply-chain
 §spec:summary-jobs §spec:quality-classes. Depends on §road:advisory-gate.
 
 **Verify:** On a PR, confirm the checks list shows the security workflow

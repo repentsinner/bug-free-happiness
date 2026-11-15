@@ -55,6 +55,58 @@ jobs:
           command -v shellcheck
           "$RUNNER_TEMP/actionlint"
 
+  # Self-test of security.yml. The call runs the workflow end to end on the
+  # pass fixture. The fixtures job runs the check step's own script on every
+  # fixture under tests/fixtures/dependabot/ and compares each outcome, so a
+  # fixture that should fail does not leave a failed job on every PR.
+  dependabot-config-call:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      path: tests/fixtures/dependabot/pass
+
+  dependabot-config-fixtures:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Each fixture's output is indented before printing: a bare ::error
+      # line would raise an annotation for a failure the test expects.
+      - name: Check each fixture's outcome
+        id: fixtures
+        run: |
+          check="$RUNNER_TEMP/check.sh"
+          yq '.jobs.dependabot-config.steps[] | select(.id == "check") | .run' \
+            .github/workflows/security.yml > "$check"
+          [ "$(head -c 4 "$check")" != null ]
+
+          mismatches=0
+          expect() {
+            local fixture=$1 want=$2 text=$3 out status=0
+            out=$(CHECK_PATH="tests/fixtures/dependabot/$fixture" \
+              bash --noprofile --norc -eo pipefail "$check" 2>&1) || status=1
+            if [ "$status" = "$want" ] && grep -qF -- "$text" <<< "$out"; then
+              echo "ok       $fixture"
+            else
+              echo "mismatch $fixture: exit $status, want $want and text '$text'"
+              mismatches=$((mismatches + 1))
+            fi
+            mapfile -t lines <<< "$out"
+            printf '    %s\n' "${lines[@]}"
+          }
+
+          expect pass 0 "conforms"
+          expect missing-config 1 "no Dependabot configuration"
+          expect missing-ecosystem 1 "package-ecosystem pub"
+          expect infrequent 1 "is monthly"
+          expect ungrouped 1 "minor and patch"
+          [ "$mismatches" -eq 0 ]
+
   # Summary jobs carry the required check names. Each runs whatever its
   # dependencies' outcome, because GitHub counts a skipped required check as
   # passing. classify is a dependency too: if it fails, the class jobs skip.
@@ -65,6 +117,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Fail when a governance job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          exit 1
+
+  # Not a required check yet (§spec:supply-chain).
+  security:
+    name: quality / security
+    needs: [classify, dependabot-config-call, dependabot-config-fixtures]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a security job failed or was cancelled
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         env:
           NEEDS: ${{ toJSON(needs) }}

@@ -95,6 +95,32 @@ jobs:
 build, lint and test jobs. This repository's own
 [`quality.yml`](.github/workflows/quality.yml) is a complete example.
 
+## Optional checks
+
+`quality / security` reports supply-chain findings on each pull request.
+The ruleset template doesn't require it yet, so a failure shows in the
+checks list without blocking the merge (§spec:supply-chain). Its first
+job reads the repository's Dependabot configuration. The configuration
+needs an entry for `github-actions` and for each tracked stack: `uv` or
+`pip` for Python manifests, `pub` for `pubspec.yaml`. Each entry runs
+daily or weekly, with a group that takes minor and patch updates.
+
+```yaml
+  security-checks:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: repentsinner/bug-free-happiness/.github/workflows/security.yml@<sha> # v0.3.0
+
+  security:
+    name: quality / security
+    needs: [classify, security-checks]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+```
+
 ## License
 
 MIT
