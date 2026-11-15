@@ -168,16 +168,25 @@ the job, so one failure does not hide another.
 
 A project with private git dependencies names a GitHub App with Contents
 read access to them. The workflow mints a read-only token from it on
-each run and has git fetch github.com dependencies over HTTPS with that
-token, rewriting `ssh://` sources.
+each run and has git fetch the owner's github.com dependencies over
+HTTPS with that token. Adopters declare those dependencies as `https://`
+URLs; the workflow still rewrites `ssh://` sources for an adopter that
+has not switched.
+
+**Why HTTPS sources:** Dependabot's update job resolves and relocks the
+dependencies itself, outside any workflow, so the App's token never
+reaches it. It reaches an organization's private repositories through
+the organization's Dependabot access grant, which works over HTTPS only,
+and fails an `ssh://` source as an unreachable host. Developers fetch
+the HTTPS sources with a git credential helper such as `gh auth
+setup-git`, or map them back to SSH with `url.<ssh>.insteadOf`.
 
 **Why an App token, not SSH or a personal token:** a runner has no SSH
 key, and a personal access token ties an organization's CI to one
 person's account. An App the organization owns mints a short-lived token
 limited to the repositories it is installed on and to read access, so
-`ssh://` sources keep working for developers while CI needs no personal
-credential. The caller passes the App's key because a token minted in
-another job cannot cross into a reusable workflow.
+CI needs no personal credential. The caller passes the App's key because
+a token minted in another job cannot cross into a reusable workflow.
 
 **Why require a type checker but not a particular one:** type errors are
 correctness failures that tests miss, so `quality / correctness` without

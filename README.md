@@ -119,9 +119,12 @@ versions locally (§spec:stack-implementations). mypy reads its targets from the
 
 A project with private git dependencies passes a GitHub App with
 Contents read access to them. The workflow mints a read-only token per
-run and fetches github.com git dependencies over HTTPS with it, so
-`ssh://` sources keep working for developers with SSH keys
-(§spec:stack-implementations).
+run and fetches the owner's github.com git dependencies over HTTPS with
+it. Declare those sources as `https://github.com/...` URLs, which
+Dependabot can also fetch. Developers authenticate them with `gh auth
+setup-git`, or keep using an SSH key by mapping the URLs back with
+`git config --global url."git@github.com:<owner>/".insteadOf
+"https://github.com/<owner>/"` (§spec:stack-implementations).
 
 ```yaml
     uses: repentsinner/bug-free-happiness/.github/workflows/python-correctness.yml@<sha> # v0.5.0
