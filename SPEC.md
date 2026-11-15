@@ -206,9 +206,18 @@ pin, so one tool release meant one bump per adopter. The pins live in
 a uv project at `.github/tools/python/`, which the workflow reads from
 its own commit, so a caller gets the versions its pinned SHA was tested
 with. Dependabot proposes each tool bump there, the self-test gates it,
-and adopters take it with the SHA bump Dependabot already proposes. **Tradeoff accepted:** an adopter's local ruff, from its lock
-or pre-commit, can drift from the workflow's until the adopter matches
-it.
+and adopters take it with the SHA bump Dependabot already proposes. An
+adopter's dev group therefore carries no ruff, pyright or mypy of its
+own.
+
+**Why a local command from the same project:** an adopter that pins its
+own lint tools to run them locally rebuilds the per-adopter pins and
+bumps the shared workflow exists to remove, and its pins drift from
+CI's. The tools project packages `bfh-check`, which runs the workflow's
+steps with the workflow's versions, read from the same dependencies, so
+a local run agrees with CI by construction. **Tradeoff accepted:** a
+developer runs the release their `quality.yml` pins by naming it in the
+command; a newer one may report what that CI run does not.
 
 **Why the self-test names the failing step:** a call that fails leaves
 a failed job in every run and marks each pull request unstable. The
