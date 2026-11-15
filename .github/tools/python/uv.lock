@@ -268,7 +268,7 @@ wheels = [
 [[package]]
 name = "python-correctness-tools"
 version = "0.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "mypy" },
     { name = "pyright" },

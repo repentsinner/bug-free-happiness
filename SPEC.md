@@ -168,16 +168,25 @@ the job, so one failure does not hide another.
 
 A project with private git dependencies names a GitHub App with Contents
 read access to them. The workflow mints a read-only token from it on
-each run and has git fetch github.com dependencies over HTTPS with that
-token, rewriting `ssh://` sources.
+each run and has git fetch the owner's github.com dependencies over
+HTTPS with that token. Adopters declare those dependencies as `https://`
+URLs; the workflow still rewrites `ssh://` sources for an adopter that
+has not switched.
+
+**Why HTTPS sources:** Dependabot's update job resolves and relocks the
+dependencies itself, outside any workflow, so the App's token never
+reaches it. It reaches an organization's private repositories through
+the organization's Dependabot access grant, which works over HTTPS only,
+and fails an `ssh://` source as an unreachable host. Developers fetch
+the HTTPS sources with a git credential helper such as `gh auth
+setup-git`, or map them back to SSH with `url.<ssh>.insteadOf`.
 
 **Why an App token, not SSH or a personal token:** a runner has no SSH
 key, and a personal access token ties an organization's CI to one
 person's account. An App the organization owns mints a short-lived token
 limited to the repositories it is installed on and to read access, so
-`ssh://` sources keep working for developers while CI needs no personal
-credential. The caller passes the App's key because a token minted in
-another job cannot cross into a reusable workflow.
+CI needs no personal credential. The caller passes the App's key because
+a token minted in another job cannot cross into a reusable workflow.
 
 **Why require a type checker but not a particular one:** type errors are
 correctness failures that tests miss, so `quality / correctness` without
@@ -206,9 +215,18 @@ pin, so one tool release meant one bump per adopter. The pins live in
 a uv project at `.github/tools/python/`, which the workflow reads from
 its own commit, so a caller gets the versions its pinned SHA was tested
 with. Dependabot proposes each tool bump there, the self-test gates it,
-and adopters take it with the SHA bump Dependabot already proposes. **Tradeoff accepted:** an adopter's local ruff, from its lock
-or pre-commit, can drift from the workflow's until the adopter matches
-it.
+and adopters take it with the SHA bump Dependabot already proposes. An
+adopter's dev group therefore carries no ruff, pyright or mypy of its
+own.
+
+**Why a local command from the same project:** an adopter that pins its
+own lint tools to run them locally rebuilds the per-adopter pins and
+bumps the shared workflow exists to remove, and its pins drift from
+CI's. The tools project packages `bfh-check`, which runs the workflow's
+steps with the workflow's versions, read from the same dependencies, so
+a local run agrees with CI by construction. **Tradeoff accepted:** a
+developer runs the release their `quality.yml` pins by naming it in the
+command; a newer one may report what that CI run does not.
 
 **Why the self-test names the failing step:** a call that fails leaves
 a failed job in every run and marks each pull request unstable. The

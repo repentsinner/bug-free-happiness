@@ -1,3 +1,17 @@
+## [0.8.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.8.0...v0.8.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **python:** fetch the owner's https:// git dependencies with the App token ([#51](https://github.com/repentsinner/bug-free-happiness/issues/51)) ([4da9b46](https://github.com/repentsinner/bug-free-happiness/commit/4da9b46b568de6b1e710c798a9104daf0fc2239f))
+
+# [0.8.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.7.0...v0.8.0) (2026-11-15)
+
+
+### Features
+
+* **python:** add bfh-check, the shared checks as a local command ([3a8a5a6](https://github.com/repentsinner/bug-free-happiness/commit/3a8a5a6049df682bbb5482b349a8e5a7ec7b001f))
+
 # [0.7.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.6.0...v0.7.0) (2026-11-15)
 
 
