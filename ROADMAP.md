@@ -61,6 +61,25 @@ fixture's log shows its named check failing and the others passing, and
 `quality / correctness` is green. Break the passing fixture's test, and
 confirm `quality / correctness` fails and blocks merge.
 
+## Type checking everywhere §road:type-checking
+
+### Type-check the last untyped adopter §road:type-check-last-adopter
+
+Bring the one Python adopter that calls the workflow without a type
+checker to pyright or mypy: add type stubs for its untyped C-extension
+dependency, fix the remaining findings, and drop `type-checker: none`.
+§spec:stack-implementations. Maintainer action in that repository.
+
+### Remove the transitional none §road:remove-type-checker-none
+
+Remove `none` from `python-correctness.yml`'s `type-checker` input, so a
+caller naming it fails. §spec:stack-implementations. Depends on
+§road:type-check-last-adopter.
+
+**Verify:** Confirm no adopter's call names `type-checker: none`. Call
+the workflow with `none` from a fixture, and confirm the job fails with
+an error naming the accepted values.
+
 ## Dart and Flutter correctness workflow §road:flutter-correctness
 
 ### Publish the Flutter correctness workflow §road:flutter-correctness-workflow

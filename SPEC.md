@@ -157,8 +157,10 @@ may add, rename or remove jobs without any adopter touching its
 ruleset, because only the summary job's name is required.
 
 The Python workflow runs ruff's lint and format checks, a type checker
-the adopter names (pyright, mypy or none), and the project's tests from
-its locked environment. It pins ruff, pyright and mypy itself; pytest
+the adopter names, and the project's tests from its locked environment.
+An adopter shall type-check with pyright or mypy; `none` remains only
+while an adopter without a checker adopts one, and it warns on every
+run. It pins ruff, pyright and mypy itself; pytest
 comes from the project's lock, because the tests import the project's
 dependencies. Each check runs to completion, and a final step decides
 the job, so one failure does not hide another.
@@ -175,6 +177,15 @@ limited to the repositories it is installed on and to read access, so
 `ssh://` sources keep working for developers while CI needs no personal
 credential. The caller passes the App's key because a token minted in
 another job cannot cross into a reusable workflow.
+
+**Why require a type checker but not a particular one:** type errors are
+correctness failures that tests miss, so `quality / correctness` without
+a checker is a weaker gate than its name claims. pyright and mypy follow
+the same typing specification and agree on ordinary code; they differ in
+speed, in how much unannotated code they check, and in mypy's plugins,
+which suit some frameworks. Which checker runs is a tooling choice the
+contract does not depend on, so each adopter picks one and its
+strictness.
 
 **Why pin the lint tools centrally:** a ruff or pyright release brings
 new findings that need code edits, and every adopter carried its own
