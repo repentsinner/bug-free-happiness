@@ -29,6 +29,16 @@ inputs:
       Self-test only. pass, or the one check expected to fail: deps,
       analyze, format or tests. The step passes when every check matches.
     default: pass
+  app-client-id:
+    description: >-
+      Client ID of a GitHub App with Contents read access to the package's
+      private git dependencies. With app-private-key, the action mints a
+      read-only token and fetches github.com git dependencies over HTTPS
+      with it, including ones declared as ssh:// URLs.
+    default: ""
+  app-private-key:
+    description: Private key of the app-client-id App. Pass it from a secret.
+    default: ""
 
 runs:
   using: composite
@@ -47,6 +57,33 @@ runs:
         cp "$GITHUB_ACTION_PATH/flutter-check.sh" "$RUNNER_TEMP/flutter-check.sh"
         "$RUNNER_TEMP/flutter-check.sh" resolve \
           --sdk-version "$SDK_VERSION" "$PACKAGE" >> "$GITHUB_OUTPUT"
+
+    # Private git dependencies: a token from the caller's App, read-only and
+    # scoped to the repositories that App is installed on, minted per run.
+    # It is minted here, in the job that fetches, because a token minted in
+    # another job cannot reach this one through a reusable workflow.
+    - name: Mint a token for private dependencies
+      id: deps-token
+      if: inputs.app-client-id != ''
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        client-id: ${{ inputs.app-client-id }}
+        private-key: ${{ inputs.app-private-key }}
+        owner: ${{ github.repository_owner }}
+        permission-contents: read
+
+    # Adopters declare these dependencies as ssh:// URLs so a developer's
+    # SSH key fetches them locally. A runner has no key, so git rewrites
+    # both SSH forms to HTTPS carrying the token; pub fetches through git.
+    - name: Route github.com git fetches through the token
+      if: steps.deps-token.outputs.token != ''
+      shell: bash
+      env:
+        TOKEN: ${{ steps.deps-token.outputs.token }}
+      run: |
+        base="https://x-access-token:${TOKEN}@github.com/"
+        git config --global url."$base".insteadOf "ssh://git@github.com/"
+        git config --global --add url."$base".insteadOf "git@github.com:"
 
     - name: Install Flutter
       if: steps.resolve.outputs.install == 'flutter'

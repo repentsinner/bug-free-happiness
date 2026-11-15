@@ -37,6 +37,18 @@ on:
           every check matches.
         type: string
         default: pass
+      app-client-id:
+        description: >-
+          Client ID of a GitHub App with Contents read access to the packages'
+          private git dependencies. With app-private-key, each job mints a
+          read-only token and fetches github.com git dependencies over HTTPS
+          with it, including ones declared as ssh:// URLs.
+        type: string
+        default: ""
+    secrets:
+      app-private-key:
+        description: Private key of the app-client-id App.
+        required: false
 
 permissions:
   contents: read
@@ -108,3 +120,5 @@ jobs:
           # The floor leg's self-test expects it to pass: it shows the relaxed
           # infos rule, where the pinned leg's expect names the stricter failure.
           expect: ${{ matrix.leg.floor && 'pass' || inputs.expect }}
+          app-client-id: ${{ inputs.app-client-id }}
+          app-private-key: ${{ secrets.app-private-key }}

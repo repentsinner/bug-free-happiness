@@ -265,7 +265,16 @@ package's author may never have built against.
 
 A project with private git dependencies names a GitHub App, as the
 Python workflow's callers do, and the check fetches them with a
-read-only token minted from it.
+read-only token minted from it. The composite action mints the token and
+routes git's github.com fetches through it, and the reusable workflow
+passes its caller's App to the action, so both entry points take the App.
+
+**Why the action mints the token:** the token has to be minted in the job
+that fetches the dependencies, for the reason the Python workflow takes
+the App's key itself. A project that runs the action in its own job has no
+reusable workflow to mint for it, so minting in the workflow alone would
+leave that project without private dependencies. The action is the one
+step both entry points run, so it mints once for both.
 
 Setup a project needs beyond the Dart and Flutter SDKs stays with the
 project: system packages, native toolchains, caches, code generation and

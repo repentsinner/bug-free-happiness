@@ -168,10 +168,25 @@ constraint makes, so it fails on analyzer errors and warnings but not
 infos, and it skips the format check, because lint rules and formatter
 output change between SDK releases.
 
+A project with private git dependencies passes a GitHub App with Contents
+read access to them, as a Python project does. Each job mints a read-only
+token and fetches github.com git dependencies over HTTPS with it, so
+`ssh://` and `git@github.com:` sources keep working for developers with SSH
+keys (§spec:flutter-correctness).
+
+```yaml
+    uses: repentsinner/bug-free-happiness/.github/workflows/flutter-correctness.yml@<sha> # v0.9.0
+    with:
+      app-client-id: ${{ vars.DEPS_READER_CLIENT_ID }}
+    secrets:
+      app-private-key: ${{ secrets.DEPS_READER_PRIVATE_KEY }}
+```
+
 A project that needs more than the SDK, such as system packages, a native
 toolchain or code generation, runs the `flutter-check` action as a step of
 its own job, after that setup. The action takes `path`, `sdk-version` and
-`floor`, and checks one package.
+`floor`, and checks one package. It takes `app-client-id` and
+`app-private-key` as inputs too, so pass the key from a secret.
 
 ```yaml
   flutter:
