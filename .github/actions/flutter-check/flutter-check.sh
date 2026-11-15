@@ -105,7 +105,7 @@ resolve() {
   package=$1
   [ -f "$package/pubspec.yaml" ] || die "$package has no pubspec.yaml"
 
-  local toolchain install version source fvmrc
+  local toolchain install version pin fvmrc
   toolchain=$(toolchain_of "$package")
   if [ "$floor" = true ]; then
     # A Flutter package's floor is a Flutter release, which bundles the Dart
@@ -129,19 +129,19 @@ resolve() {
   # developer runs through fvm.
   if [ -n "$fvmrc" ]; then
     install=flutter
-    source=$fvmrc
+    pin=$fvmrc
     version=$(sed -n 's/.*"flutter"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$fvmrc" | head -n 1)
     is_release "$version" || die "$fvmrc names Flutter '$version', not a release such as 3.50.0"
   elif [ -n "$sdk_version" ]; then
     install=$toolchain
-    source=sdk-version
+    pin=sdk-version
     version=$sdk_version
     is_release "$version" || die "sdk-version is '$version', not a release such as 3.50.0"
   else
     die "$package has no SDK pin: add a .fvmrc naming a Flutter release, or set sdk-version"
   fi
 
-  echo "$package: $install $version from $source, $toolchain toolchain" >&2
+  echo "$package: $install $version from $pin, $toolchain toolchain" >&2
   echo "toolchain=$toolchain"
   echo "install=$install"
   echo "version=$version"
@@ -162,7 +162,8 @@ run_check() {
 }
 
 # The outcome --expect asks of one check. Analysis and tests cannot run
-# without resolved dependencies, so they are skipped when resolution fails.
+# without resolved dependencies, so they are skipped when resolution fails,
+# and the floor leg skips formatting.
 wanted() {
   local check=$1
   if [ "$floor" = true ] && [ "$check" = format ]; then
