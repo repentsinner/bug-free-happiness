@@ -116,6 +116,20 @@ versions locally (§spec:stack-implementations). mypy reads its targets from the
       type-checker: pyright
 ```
 
+A project with private git dependencies passes a GitHub App with
+Contents read access to them. The workflow mints a read-only token per
+run and fetches github.com git dependencies over HTTPS with it, so
+`ssh://` sources keep working for developers with SSH keys
+(§spec:stack-implementations).
+
+```yaml
+    uses: repentsinner/bug-free-happiness/.github/workflows/python-correctness.yml@<sha> # v0.5.0
+    with:
+      app-client-id: ${{ vars.DEPS_READER_CLIENT_ID }}
+    secrets:
+      app-private-key: ${{ secrets.DEPS_READER_PRIVATE_KEY }}
+```
+
 ## Optional checks
 
 `quality / security` reports supply-chain findings on each pull request.

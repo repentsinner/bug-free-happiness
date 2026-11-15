@@ -163,6 +163,19 @@ comes from the project's lock, because the tests import the project's
 dependencies. Each check runs to completion, and a final step decides
 the job, so one failure does not hide another.
 
+A project with private git dependencies names a GitHub App with Contents
+read access to them. The workflow mints a read-only token from it on
+each run and has git fetch github.com dependencies over HTTPS with that
+token, rewriting `ssh://` sources.
+
+**Why an App token, not SSH or a personal token:** a runner has no SSH
+key, and a personal access token ties an organization's CI to one
+person's account. An App the organization owns mints a short-lived token
+limited to the repositories it is installed on and to read access, so
+`ssh://` sources keep working for developers while CI needs no personal
+credential. The caller passes the App's key because a token minted in
+another job cannot cross into a reusable workflow.
+
 **Why pin the lint tools centrally:** a ruff or pyright release brings
 new findings that need code edits, and every adopter carried its own
 pin, so one tool release meant one bump per adopter. The pins live in
