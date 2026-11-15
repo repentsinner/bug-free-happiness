@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.3.0...v0.3.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **rulesets:** set the review dismissal restriction explicitly ([#36](https://github.com/repentsinner/bug-free-happiness/issues/36)) ([de19866](https://github.com/repentsinner/bug-free-happiness/commit/de19866dcff1f7400a785a5d29b478d83d7edccb))
+
 # [0.3.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.2.2...v0.3.0) (2026-11-15)
 
 
