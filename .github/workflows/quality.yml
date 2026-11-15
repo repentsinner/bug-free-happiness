@@ -242,10 +242,13 @@ jobs:
   # Self-test of flutter-correctness.yml against tests/fixtures/flutter/, the
   # same way: each failing fixture breaks one check and `expect` names it.
   # The passing call lists two packages, one Dart and one Flutter, each on its
-  # pinned SDK and its floor. The Flutter package's .fvmrc wins over
-  # sdk-version; the failing fixtures carry a .fvmrc too, so their Dart runs
-  # from that Flutter release. The floor fixture's info fails analysis on the
-  # pinned SDK only, because the floor leg does not treat infos as fatal.
+  # pinned SDK, its floor and its downgrade leg. The Flutter package's .fvmrc
+  # wins over sdk-version; the failing fixtures carry a .fvmrc too, so their
+  # Dart runs from that Flutter release. The floor fixture's info fails
+  # analysis on the pinned SDK only, because the floor leg does not treat
+  # infos as fatal. The downgrade fixture's lower bound admits a dependency
+  # release without an API it uses, so it fails analysis on the downgrade
+  # leg only.
   flutter-pass:
     needs: classify
     if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
@@ -256,6 +259,7 @@ jobs:
         tests/fixtures/flutter/flutter-pass
       sdk-version: 3.14.0
       floor: true
+      downgrade: true
 
   flutter-floor:
     needs: classify
@@ -266,6 +270,16 @@ jobs:
       sdk-version: 3.14.0
       floor: true
       expect: analyze
+
+  flutter-downgrade:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: tests/fixtures/flutter/downgrade
+      sdk-version: 3.14.0
+      downgrade: true
+      expect-downgrade: analyze
 
   flutter-fail-deps:
     needs: classify
@@ -344,6 +358,7 @@ jobs:
       - python-fail-tests
       - flutter-pass
       - flutter-floor
+      - flutter-downgrade
       - flutter-fail-deps
       - flutter-fail-analyze
       - flutter-fail-format

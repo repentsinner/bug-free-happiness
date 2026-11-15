@@ -259,6 +259,10 @@ it checks, the check shall:
   package's `environment` constraint admits, where the analyzer fails on
   errors and warnings but not infos, formatting is not checked, and the
   tests run as on the pinned SDK;
+- when the caller asks for a downgrade leg, also run on the pinned SDK
+  with the package's direct dependencies resolved to the oldest versions
+  their constraints admit, under the floor leg's analyzer and formatting
+  rules;
 - check each package directory the caller lists, or the repository root
   when it lists none.
 
@@ -274,6 +278,12 @@ is the lower bound of `environment.sdk`. When dependency resolution fails,
 the analyzer and the tests do not run, because neither can without resolved
 dependencies, and the check fails naming resolution.
 
+The downgrade leg lowers the packages under `dependencies` and leaves every
+other package, `dev_dependencies` and their dependencies included, at the
+version the pinned leg resolves. A local run of the downgrade leg restores
+the package's `pubspec.lock` afterwards, so it leaves a developer's
+resolution as it found it.
+
 **Why a Flutter package's floor comes from `environment.flutter`:** a
 Flutter release fixes the Dart it bundles, so the oldest Flutter release a
 package admits is a Flutter fact. Deriving it from `environment.sdk` would
@@ -283,7 +293,16 @@ package's author may never have built against.
 
 A project with private git dependencies names a GitHub App, as the
 Python workflow's callers do, and the check fetches them with a
-read-only token minted from it.
+read-only token minted from it. The composite action mints the token and
+routes git's github.com fetches through it, and the reusable workflow
+passes its caller's App to the action, so both entry points take the App.
+
+**Why the action mints the token:** the token has to be minted in the job
+that fetches the dependencies, for the reason the Python workflow takes
+the App's key itself. A project that runs the action in its own job has no
+reusable workflow to mint for it, so minting in the workflow alone would
+leave that project without private dependencies. The action is the one
+step both entry points run, so it mints once for both.
 
 Setup a project needs beyond the Dart and Flutter SDKs stays with the
 project: system packages, native toolchains, caches, code generation and
@@ -326,6 +345,22 @@ only a build on the oldest one tests. That leg exists to prove the code
 analyzes and passes its tests there. Lint rules and formatter output
 change between SDK releases, so on the floor leg they report differences
 in the tools, not defects in the code.
+
+**Why a downgrade leg:** a library's dependency constraints are the same
+kind of claim as its `environment` constraint. The project that uses the
+library resolves against the whole admitted range, while the pinned leg
+tests only its newest end, so a lower bound left behind when the code
+starts using a newer API passes every pinned run. The downgrade leg
+builds against the lower bounds, where that mistake fails the analyzer.
+It relaxes infos and formatting for the floor leg's reason: the pinned
+leg already enforces both, and the leg exists to prove compatibility.
+
+**Rejected — downgrading every package:** a full downgrade also lowers
+the test runner and its dependencies to combinations no one released
+together, and the oldest of them fail to load on a current SDK. That
+failure says nothing about the package, and a package's projects never
+resolve its dev dependencies at all. Lowering only the direct
+dependencies tests the bounds a project resolves against.
 
 **Rejected — a system-packages input:** every system package list in the
 surveyed projects belonged to one project's own needs: a USB library for

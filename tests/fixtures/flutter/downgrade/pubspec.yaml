@@ -1,0 +1,16 @@
+name: fixture
+description: >-
+  Dart package whose fixnum lower bound predates an API it uses, which passes
+  on the pinned leg and fails analysis on the downgrade leg.
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  # Int64.tryParseInt arrived in fixnum 1.1.0, so ^1.0.0 admits a release
+  # without it. Nothing the test package depends on constrains fixnum.
+  fixnum: ^1.0.0
+
+dev_dependencies:
+  test: ^1.33.0

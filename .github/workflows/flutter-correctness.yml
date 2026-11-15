@@ -30,6 +30,13 @@ on:
           infos, and formatting is not checked.
         type: boolean
         default: false
+      downgrade:
+        description: >-
+          Also run each package on the pinned SDK with its direct
+          dependencies resolved to the oldest versions their constraints
+          admit, under the floor leg's analyzer and formatting rules.
+        type: boolean
+        default: false
       expect:
         description: >-
           Self-test only. pass, or the one check expected to fail on the
@@ -37,6 +44,24 @@ on:
           every check matches.
         type: string
         default: pass
+      expect-downgrade:
+        description: >-
+          Self-test only. pass, or the one check expected to fail on the
+          downgrade leg: deps, analyze or tests.
+        type: string
+        default: pass
+      app-client-id:
+        description: >-
+          Client ID of a GitHub App with Contents read access to the packages'
+          private git dependencies. With app-private-key, each job mints a
+          read-only token and fetches github.com git dependencies over HTTPS
+          with it, including ones declared as ssh:// URLs.
+        type: string
+        default: ""
+    secrets:
+      app-private-key:
+        description: Private key of the app-client-id App.
+        required: false
 
 permissions:
   contents: read
@@ -52,21 +77,25 @@ jobs:
         env:
           PACKAGES: ${{ inputs.packages }}
           FLOOR: ${{ inputs.floor }}
+          DOWNGRADE: ${{ inputs.downgrade }}
         run: |
-          legs=$(jq -nc --arg packages "$PACKAGES" --argjson floor "$FLOOR" '
+          legs=$(jq -nc --arg packages "$PACKAGES" \
+            --argjson floor "$FLOOR" --argjson downgrade "$DOWNGRADE" '
             [$packages | splits("\\s+") | select(length > 0)]
             | if length == 0 then ["."] else . end
-            | [.[] | {path: ., floor: false}, (select($floor) | {path: ., floor: true})]')
+            | [.[] | {path: ., leg: "pinned"},
+                (select($floor) | {path: ., leg: "floor"}),
+                (select($downgrade) | {path: ., leg: "downgrade"})]')
           echo "legs=$legs" >> "$GITHUB_OUTPUT"
 
   check:
     needs: plan
-    name: ${{ matrix.leg.path }}${{ matrix.leg.floor && ' (floor)' || '' }}
+    name: ${{ matrix.run.path }}${{ matrix.run.leg != 'pinned' && format(' ({0})', matrix.run.leg) || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        leg: ${{ fromJSON(needs.plan.outputs.legs) }}
+        run: ${{ fromJSON(needs.plan.outputs.legs) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -102,9 +131,17 @@ jobs:
 
       - uses: ./.flutter-correctness/.github/actions/flutter-check
         with:
-          path: ${{ matrix.leg.path }}
+          path: ${{ matrix.run.path }}
           sdk-version: ${{ inputs.sdk-version }}
-          floor: ${{ matrix.leg.floor }}
+          floor: ${{ matrix.run.leg == 'floor' }}
+          downgrade: ${{ matrix.run.leg == 'downgrade' }}
           # The floor leg's self-test expects it to pass: it shows the relaxed
           # infos rule, where the pinned leg's expect names the stricter failure.
-          expect: ${{ matrix.leg.floor && 'pass' || inputs.expect }}
+          # The downgrade leg's names its own, a lower bound the pinned leg
+          # cannot see.
+          expect: >-
+            ${{ matrix.run.leg == 'floor' && 'pass'
+            || matrix.run.leg == 'downgrade' && inputs.expect-downgrade
+            || inputs.expect }}
+          app-client-id: ${{ inputs.app-client-id }}
+          app-private-key: ${{ secrets.app-private-key }}
