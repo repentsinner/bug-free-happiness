@@ -88,38 +88,11 @@ an error naming the accepted values.
 
 ## Dart and Flutter correctness check §road:flutter-correctness
 
-### Publish the Dart and Flutter check §road:flutter-correctness-workflow
-
-Add the check script, the composite action
-`.github/actions/flutter-check/action.yml` and the reusable
-`.github/workflows/flutter-correctness.yml` around it, running dependency
-resolution, analysis with infos fatal, the format check and tests on each
-listed package with the SDK from `.fvmrc` or `sdk-version`, and an
-`expect` input for self-tests. §spec:flutter-correctness
-§spec:stack-implementations.
-
-### Add the floor leg §road:flutter-floor-leg
-
-Add a `floor` input that also runs the check on the oldest SDK a
-package's `environment` constraint admits, under the floor leg's relaxed
-rules. §spec:flutter-correctness. Depends on
-§road:flutter-correctness-workflow.
-
 ### Fetch private git dependencies §road:flutter-private-deps
 
 Add the `app-client-id` input and `app-private-key` secret that mint a
 read-only token for private git dependencies, as the Python workflow
-does. §spec:flutter-correctness §spec:stack-implementations. Depends on
-§road:flutter-correctness-workflow.
-
-### Self-test against Dart and Flutter fixtures §road:flutter-fixtures
-
-Add a passing Dart package, a passing Flutter package, a package for the
-floor leg and one failing fixture per check under `tests/fixtures/flutter/`,
-and make `quality / correctness` in `.github/workflows/quality.yml` depend
-on calls expecting each outcome. §spec:flutter-correctness
-§spec:summary-jobs §spec:quality-classes. Depends on
-§road:flutter-floor-leg.
+does. §spec:flutter-correctness §spec:stack-implementations.
 
 **Verify:** On a PR, confirm the checks list shows a passing call for each
 passing fixture, and for each failing fixture a call that passes because

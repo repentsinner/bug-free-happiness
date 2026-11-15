@@ -1,0 +1,110 @@
+name: flutter-correctness
+
+# Correctness checks for Dart and Flutter packages (§spec:flutter-correctness):
+# dependency resolution, the analyzer with infos fatal, the format check and
+# the tests, one job per package and leg. An adopter calls this workflow and
+# makes its `quality / correctness` summary job depend on the call.
+#
+# Each job runs the flutter-check action from this workflow's own commit, so
+# the workflow and the action cannot diverge in what they check. The SDK pin
+# stays with the project: its .fvmrc, or the sdk-version input.
+on:
+  workflow_call:
+    inputs:
+      packages:
+        description: >-
+          Package directories relative to the repository root, separated by
+          whitespace or newlines. Defaults to the root.
+        type: string
+        default: .
+      sdk-version:
+        description: >-
+          SDK release for a package without a .fvmrc: a Flutter release for a
+          Flutter package, a Dart release otherwise. A .fvmrc wins.
+        type: string
+        default: ""
+      floor:
+        description: >-
+          Also run each package on the oldest SDK its environment constraint
+          admits, where the analyzer fails on errors and warnings but not
+          infos, and formatting is not checked.
+        type: boolean
+        default: false
+      expect:
+        description: >-
+          Self-test only. pass, or the one check expected to fail on the
+          pinned SDK: deps, analyze, format or tests. Each job passes when
+          every check matches.
+        type: string
+        default: pass
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      legs: ${{ steps.plan.outputs.legs }}
+    steps:
+      - name: List each package's legs
+        id: plan
+        env:
+          PACKAGES: ${{ inputs.packages }}
+          FLOOR: ${{ inputs.floor }}
+        run: |
+          legs=$(jq -nc --arg packages "$PACKAGES" --argjson floor "$FLOOR" '
+            [$packages | splits("\\s+") | select(length > 0)]
+            | if length == 0 then ["."] else . end
+            | [.[] | {path: ., floor: false}, (select($floor) | {path: ., floor: true})]')
+          echo "legs=$legs" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: plan
+    name: ${{ matrix.leg.path }}${{ matrix.leg.floor && ' (floor)' || '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.plan.outputs.legs) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The action lives beside this workflow, so run it from the commit the
+      # caller pinned. job.workflow_* names that commit; github.sha would name
+      # the caller's. Fail rather than fall back to another version.
+      - name: Resolve this workflow's commit
+        id: self
+        env:
+          WF_REPO: ${{ job.workflow_repository }}
+          WF_SHA: ${{ job.workflow_sha }}
+        run: |
+          if [ -z "$WF_REPO" ] || [ -z "$WF_SHA" ]; then
+            echo "::error::job.workflow_repository / job.workflow_sha are unavailable; cannot fetch the flutter-check action"
+            exit 1
+          fi
+          echo "repository=$WF_REPO" >> "$GITHUB_OUTPUT"
+          echo "sha=$WF_SHA" >> "$GITHUB_OUTPUT"
+
+      # A local action must sit in the workspace. The directory is hidden and
+      # holds no Dart, so the analyzer and formatter pass over it.
+      - name: Check out the flutter-check action
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.self.outputs.repository }}
+          ref: ${{ steps.self.outputs.sha }}
+          path: .flutter-correctness
+          sparse-checkout: .github/actions/flutter-check
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: ./.flutter-correctness/.github/actions/flutter-check
+        with:
+          path: ${{ matrix.leg.path }}
+          sdk-version: ${{ inputs.sdk-version }}
+          floor: ${{ matrix.leg.floor }}
+          # The floor leg's self-test expects it to pass: it shows the relaxed
+          # infos rule, where the pinned leg's expect names the stricter failure.
+          expect: ${{ matrix.leg.floor && 'pass' || inputs.expect }}

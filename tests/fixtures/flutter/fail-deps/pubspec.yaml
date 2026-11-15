@@ -1,0 +1,12 @@
+name: fixture
+description: Dart package whose dependencies do not resolve.
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  path: ^999.0.0
+
+dev_dependencies:
+  test: ^1.33.0

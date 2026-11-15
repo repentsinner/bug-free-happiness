@@ -1,0 +1,75 @@
+name: flutter-check
+description: >-
+  Dart and Flutter correctness check on one package: dependency resolution,
+  the analyzer with infos fatal, the format check and the tests, on the SDK
+  the package's .fvmrc or the sdk-version input pins.
+
+# A project whose job needs setup beyond the SDK (system packages, native
+# toolchains, code generation) runs this action as a step after that setup.
+# One without calls flutter-correctness.yml, which runs this action
+# (§spec:flutter-correctness). The checks themselves live in
+# flutter-check.sh beside this file, which a developer runs locally too.
+inputs:
+  path:
+    description: Package directory, relative to the repository root.
+    default: .
+  sdk-version:
+    description: >-
+      SDK release for a package without a .fvmrc: a Flutter release for a
+      Flutter package, a Dart release otherwise. A .fvmrc wins.
+    default: ""
+  floor:
+    description: >-
+      true runs the floor leg: the oldest SDK the package's environment
+      constraint admits, where the analyzer fails on errors and warnings but
+      not infos, and formatting is not checked.
+    default: "false"
+  expect:
+    description: >-
+      Self-test only. pass, or the one check expected to fail: deps,
+      analyze, format or tests. The step passes when every check matches.
+    default: pass
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the SDK
+      id: resolve
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.path }}
+        SDK_VERSION: ${{ inputs.sdk-version }}
+        FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
+      # The Check step runs a copy outside the workspace, made here before
+      # any of the package's code runs, so its tests cannot rewrite the
+      # script that judges them.
+      run: |
+        cp "$GITHUB_ACTION_PATH/flutter-check.sh" "$RUNNER_TEMP/flutter-check.sh"
+        "$RUNNER_TEMP/flutter-check.sh" resolve \
+          --sdk-version "$SDK_VERSION" "$PACKAGE" >> "$GITHUB_OUTPUT"
+
+    - name: Install Flutter
+      if: steps.resolve.outputs.install == 'flutter'
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      with:
+        channel: stable
+        flutter-version: ${{ steps.resolve.outputs.version }}
+        cache: true
+
+    # setup-dart's analyzer problem matcher stays off, so a Dart package's
+    # findings report as a Flutter package's do: in the log, not as
+    # annotations.
+    - name: Install Dart
+      if: steps.resolve.outputs.install == 'dart'
+      uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
+      with:
+        sdk: ${{ steps.resolve.outputs.version }}
+        problem-matcher: "false"
+
+    - name: Check
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.path }}
+        FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
+        FLUTTER_CHECK_EXPECT: ${{ inputs.expect }}
+      run: '"$RUNNER_TEMP/flutter-check.sh" check "$PACKAGE"'

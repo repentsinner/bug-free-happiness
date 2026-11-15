@@ -150,6 +150,68 @@ arguments after `--`. The workflow and `bfh-check` both supply ruff and
 the type checker, so an adopter's dev group needs neither
 (§spec:stack-implementations).
 
+## Dart and Flutter correctness
+
+A Dart or Flutter project calls `flutter-correctness.yml` and makes its
+`quality / correctness` summary job depend on the call. For each package,
+the workflow resolves dependencies, runs the analyzer with infos fatal,
+checks formatting and runs the tests. Every check runs to completion, so
+the job's failure names each check that failed. A package that depends on
+the Flutter SDK runs `flutter` commands; any other package runs `dart`.
+
+The project owns its SDK pin. The workflow reads the nearest `.fvmrc`, from
+the package directory up to the repository root, and installs that Flutter
+release. A Dart package with a `.fvmrc` runs the Dart that Flutter release
+bundles. A package without one takes its release from `sdk-version`: a
+Flutter release for a Flutter package, a Dart release otherwise. If neither
+names an exact release, the job fails rather than run the `stable` channel
+(§spec:flutter-correctness).
+
+```yaml
+  flutter:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: repentsinner/bug-free-happiness/.github/workflows/flutter-correctness.yml@<sha> # v0.9.0
+    with:
+      packages: |
+        packages/core
+        packages/app
+      floor: true
+```
+
+`packages` lists package directories and defaults to the repository root.
+With `floor: true`, each package also runs on the oldest SDK its
+`environment` constraint admits: `environment.flutter` for a Flutter
+package, `environment.sdk` otherwise. That leg tests the claim a library's
+constraint makes, so it fails on analyzer errors and warnings but not
+infos, and it skips the format check, because lint rules and formatter
+output change between SDK releases.
+
+A project that needs more than the SDK, such as system packages, a native
+toolchain or code generation, runs the `flutter-check` action as a step of
+its own job, after that setup. The action takes `path`, `sdk-version` and
+`floor`, and checks one package.
+
+```yaml
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<sha> # v7.0.1
+      - run: sudo apt-get install -y libusb-1.0-0-dev
+      - uses: repentsinner/bug-free-happiness/.github/actions/flutter-check@<sha> # v0.9.0
+```
+
+The action runs [`flutter-check.sh`](.github/actions/flutter-check/flutter-check.sh),
+which a developer or a project's own CI script can run too. It checks each
+package directory it is given, with whichever `dart` and `flutter` are on
+PATH, so put the pinned SDK there first, for example with `fvm exec`. For
+the floor leg, put the floor SDK on PATH and pass `--floor`.
+
+```sh
+fvm exec bash flutter-check.sh packages/core packages/app
+PATH="$HOME/fvm/versions/3.44.4/bin:$PATH" bash flutter-check.sh --floor packages/core
+```
+
 ## Optional checks
 
 `quality / security` reports supply-chain findings on each pull request.

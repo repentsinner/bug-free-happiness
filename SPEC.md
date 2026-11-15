@@ -262,6 +262,25 @@ it checks, the check shall:
 - check each package directory the caller lists, or the repository root
   when it lists none.
 
+A package's `.fvmrc` is the nearest one from its directory up to the
+repository root, as fvm finds it, so a monorepo's single pin covers each of
+its packages. `.fvmrc` names a Flutter release, so a Dart package with one
+runs the Dart that release bundles. The `sdk-version` input names a Flutter
+release for a Flutter package and a Dart release otherwise. A pin shall name
+an exact release; a channel or a partial version such as `3.4` fails the
+check. A Flutter package's floor is the lower bound of `environment.flutter`,
+which the package shall declare to run the floor leg; a Dart package's floor
+is the lower bound of `environment.sdk`. When dependency resolution fails,
+the analyzer and the tests do not run, because neither can without resolved
+dependencies, and the check fails naming resolution.
+
+**Why a Flutter package's floor comes from `environment.flutter`:** a
+Flutter release fixes the Dart it bundles, so the oldest Flutter release a
+package admits is a Flutter fact. Deriving it from `environment.sdk` would
+need Flutter's release index on every run, and the result would still be
+the oldest Flutter release that bundles an admitted Dart, a release the
+package's author may never have built against.
+
 A project with private git dependencies names a GitHub App, as the
 Python workflow's callers do, and the check fetches them with a
 read-only token minted from it.
