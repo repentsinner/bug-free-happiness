@@ -95,10 +95,10 @@ none of an entry's minor and patch updates. Self-test it from a
 against fixtures under `tests/fixtures/dependabot/`.
 §spec:supply-chain §spec:summary-jobs §spec:quality-classes.
 
-**Verify:** On a PR, confirm the checks list shows the pass fixture's
-call passing and each other fixture's call failing with an annotation
-naming its gap, with `quality / security` green because each outcome
-matched. Change the pass fixture's interval to `monthly`, and confirm
+**Verify:** On a PR, confirm the fixtures job reports every fixture as
+`ok`, each failing fixture's output naming its gap, and the call on the
+pass fixture and `quality / security` both pass with no failed job in the
+run. Change the pass fixture's interval to `monthly`, and confirm
 `quality / security` fails.
 
 ## Security class §road:security-class
