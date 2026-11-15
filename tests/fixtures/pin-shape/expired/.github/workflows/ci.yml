@@ -4,4 +4,4 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: example/unreleased@0123456789abcdef0123456789abcdef01234567 # main 2026-09-28
+      - uses: ublue-os/container-storage-action@911baca08baf30c8654933e9e9723cb399892140 # main 2025-08-03

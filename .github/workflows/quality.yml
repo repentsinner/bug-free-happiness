@@ -108,7 +108,8 @@ jobs:
           [ "$mismatches" -eq 0 ]
 
   # Same harness for the pin-shape check: its step's own script against each
-  # fixture under tests/fixtures/pin-shape/.
+  # fixture under tests/fixtures/pin-shape/. The fixtures pin real Actions,
+  # because the check reads their tags.
   pin-shape-fixtures:
     needs: classify
     if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
@@ -142,11 +143,13 @@ jobs:
           }
 
           expect pass 0 "pin shape conforms"
-          expect tag-ref 1 "ci.yml:7: actions/checkout@v4"
-          expect no-comment 1 "ci.yml:7: actions/checkout@"
-          expect major-only 1 "ci.yml:7: actions/checkout@"
-          expect unlisted 1 "example/unreleased is not listed in .github/unreleased-actions.yml"
-          expect expired 1 "unreleased-actions.yml entry for example/unreleased expired on 2000-01-01"
+          expect tag-ref 1 "ci.yml:7: actions/checkout@v4 is not pinned to a 40-character commit SHA"
+          expect no-comment 1 "needs a comment naming the release at its commit: v7.0.1"
+          expect less-specific 1 "names v7, but the most specific release at its commit is v7.0.1"
+          expect stale 1 "names v5, but the tags at its commit are v7 v7.0.1"
+          expect unlisted 1 "ublue-os/container-storage-action is not listed in .github/unreleased-actions.yml"
+          expect expired 1 "entry for ublue-os/container-storage-action expired on 2000-01-01"
+          expect unreadable 0 "could not read the tags of repentsinner/no-such-action-fixture"
           [ "$mismatches" -eq 0 ]
 
   # Self-test of python-correctness.yml: one call per fixture under

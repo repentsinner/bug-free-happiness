@@ -108,11 +108,14 @@ jobs:
           persist-credentials: false
 
       # Fails unless every external `uses:` under .github/workflows/ pins a
-      # 40-character commit SHA followed by the release it is, as `# vX.Y.Z`
-      # or a tag ending in it (`# notation--v0.2.16`). An Action listed,
-      # unexpired, in .github/unreleased-actions.yml may carry
-      # `# <branch> <YYYY-MM-DD>` instead. Local references are exempt. yq
-      # ships on the Ubuntu runner image; its absence fails the job.
+      # 40-character commit SHA, followed by a comment naming a release tag at
+      # that commit: the most specific one, `v7.0.1` rather than `v7`, where
+      # several point at it. The tags are read from the Action's repository,
+      # so a comment left behind by an update fails. An Action with no tag at
+      # its commit passes only when listed, unexpired, in
+      # .github/unreleased-actions.yml, with a `# <branch> <YYYY-MM-DD>`
+      # comment. Local references are exempt. A repository whose tags cannot
+      # be read gets the comment's shape checked instead, and a warning.
       - name: Check the pin shape of every Action reference
         id: check
         env:
@@ -152,6 +155,21 @@ jobs:
 
           release='^([A-Za-z0-9._-]*-)?v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'
           branch_date='^[A-Za-z0-9._/-]+ [0-9]{4}-[0-9]{2}-[0-9]{2}$'
+
+          # Tags of each Action's repository, as "<commit> <tag>" lines, read
+          # once per Action. An annotated tag's commit is its ^{} entry.
+          declare -A tag_cache unreadable
+          tags_of() {
+            local action=$1 raw
+            [ -n "${tag_cache[$action]+set}" ] && return 0
+            [ -n "${unreadable[$action]+set}" ] && return 1
+            if ! raw=$(GIT_TERMINAL_PROMPT=0 git ls-remote --tags "https://github.com/$action.git" 2>/dev/null); then
+              unreadable[$action]=1
+              return 1
+            fi
+            tag_cache[$action]=$(awk '{ t = $2; sub("^refs/tags/", "", t); peeled = sub(/\^\{\}$/, "", t); if (peeled || !(t in seen)) { commit[t] = $1; seen[t] = 1 } } END { for (t in commit) print commit[t], t }' <<< "$raw")
+          }
+
           shopt -s nullglob
           files=("$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml)
           for file in "${files[@]}"; do
@@ -169,16 +187,43 @@ jobs:
               [[ "$ref" == ./* ]] && continue
               action=$(cut -d/ -f1-2 <<< "${ref%@*}")
               sha=${ref##*@}
+              where="$file:$n: $ref"
               if [[ "$ref" != *@* || ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-                fail "$file" "$file:$n: $ref is not pinned to a 40-character commit SHA"
-              elif [[ "$comment" =~ $release ]]; then
-                :
-              elif [[ "$comment" =~ $branch_date ]]; then
-                if ! grep -qxF -- "$action" <<< "$listed"; then
-                  fail "$file" "$file:$n: $action is not listed in .github/unreleased-actions.yml, so its pin needs a # vX.Y.Z comment"
+                fail "$file" "$where is not pinned to a 40-character commit SHA"
+                continue
+              fi
+              listed_here=no
+              grep -qxF -- "$action" <<< "$listed" && listed_here=yes
+
+              if ! tags_of "$action"; then
+                echo "::warning file=$file,line=$n::could not read the tags of $action; checked the shape of its comment only"
+                if [[ "$comment" =~ $release ]]; then
+                  :
+                elif [[ "$comment" =~ $branch_date && $listed_here == yes ]]; then
+                  :
+                else
+                  fail "$file" "$where needs a # vX.Y.Z comment naming the release it pins"
                 fi
-              else
-                fail "$file" "$file:$n: $ref needs a # vX.Y.Z comment naming the release it pins"
+                continue
+              fi
+
+              here=$(awk -v s="$sha" '$1 == s { print $2 }' <<< "${tag_cache[$action]}" | sort -V)
+              if [ -z "$here" ]; then
+                if [[ "$comment" =~ $branch_date ]]; then
+                  [ $listed_here = yes ] || fail "$file" "$file:$n: $action is not listed in .github/unreleased-actions.yml, so its commit needs a release tag"
+                else
+                  fail "$file" "$where has no release tag at its commit; pin a release, or list $action in .github/unreleased-actions.yml with a # <branch> <YYYY-MM-DD> comment"
+                fi
+                continue
+              fi
+              specific=$(grep -E "$release" <<< "$here" || true)
+              best=$(tail -n1 <<< "${specific:-$here}")
+              if [ -z "$comment" ]; then
+                fail "$file" "$where needs a comment naming the release at its commit: $best"
+              elif ! grep -qxF -- "$comment" <<< "$here"; then
+                fail "$file" "$where names $comment, but the tags at its commit are $(tr '\n' ' ' <<< "$here" | sed 's/ $//')"
+              elif [ -n "$specific" ] && ! grep -qxF -- "$comment" <<< "$specific"; then
+                fail "$file" "$where names $comment, but the most specific release at its commit is $best"
               fi
             done <<< "$uses"
           done
