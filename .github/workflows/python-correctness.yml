@@ -1,0 +1,109 @@
+name: python-correctness
+
+# Correctness checks for a uv project (§spec:stack-implementations): ruff
+# lint and format, a type checker, and the project's tests. An adopter calls
+# this workflow and makes its `quality / correctness` summary job depend on
+# the call.
+#
+# ruff, pyright and mypy are pinned here, so a tool bump lands once in this
+# repository and reaches every adopter through one SHA bump. pytest comes
+# from the project's own lock, because the tests import the project's
+# dependencies. Dependabot does not read these pins; bump them by hand.
+on:
+  workflow_call:
+    inputs:
+      path:
+        description: Directory of the uv project, relative to the repository root.
+        type: string
+        default: .
+      type-checker:
+        description: pyright, mypy, or none.
+        type: string
+        default: pyright
+      expect:
+        description: >-
+          Self-test only. pass, or the one step expected to fail: lint,
+          format, types or tests. The job passes when every step matches.
+        type: string
+        default: pass
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    env:
+      RUFF_VERSION: 0.17.4
+      PYRIGHT_VERSION: 1.1.414
+      MYPY_VERSION: 2.4.1
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          working-directory: ${{ inputs.path }}
+          enable-cache: true
+
+      # --locked fails when uv.lock no longer matches pyproject.toml, which is
+      # a correctness failure in its own right, so it is not a checked step.
+      - name: Install the locked environment
+        run: uv sync --locked
+
+      # Each check runs to completion so one failure does not hide another;
+      # the verdict step below decides the job's result.
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: uvx --from "ruff==${RUFF_VERSION}" ruff check .
+
+      - name: Format
+        id: format
+        continue-on-error: true
+        run: uvx --from "ruff==${RUFF_VERSION}" ruff format --check .
+
+      - name: Type check
+        id: types
+        continue-on-error: true
+        env:
+          TYPE_CHECKER: ${{ inputs.type-checker }}
+        run: |
+          case "$TYPE_CHECKER" in
+            pyright) uv run --with "pyright==${PYRIGHT_VERSION}" pyright ;;
+            mypy) uv run --with "mypy==${MYPY_VERSION}" mypy ;;
+            none) echo "type checking disabled by the caller" ;;
+            *) echo "::error::type-checker must be pyright, mypy or none, not '$TYPE_CHECKER'"; exit 1 ;;
+          esac
+
+      - name: Test
+        id: tests
+        continue-on-error: true
+        run: uv run pytest
+
+      - name: Verdict
+        env:
+          EXPECT: ${{ inputs.expect }}
+          LINT: ${{ steps.lint.outcome }}
+          FORMAT: ${{ steps.format.outcome }}
+          TYPES: ${{ steps.types.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+        run: |
+          case "$EXPECT" in
+            pass | lint | format | types | tests) ;;
+            *) echo "::error::expect must be pass, lint, format, types or tests, not '$EXPECT'"; exit 1 ;;
+          esac
+          mismatches=0
+          for step in lint format types tests; do
+            var="${step^^}"
+            outcome="${!var}"
+            want=success
+            [ "$step" = "$EXPECT" ] && want=failure
+            echo "$step: $outcome (expected $want)"
+            [ "$outcome" = "$want" ] || mismatches=$((mismatches + 1))
+          done
+          [ "$mismatches" -eq 0 ]
