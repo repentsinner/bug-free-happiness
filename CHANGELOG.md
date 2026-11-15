@@ -1,3 +1,16 @@
+# [0.9.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.8.1...v0.9.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **flutter:** run the check from a copy the package's tests cannot reach ([74360fa](https://github.com/repentsinner/bug-free-happiness/commit/74360faf9ec13a48645379037c8c0992d8142694))
+
+
+### Features
+
+* **flutter:** add the floor leg ([b72c55c](https://github.com/repentsinner/bug-free-happiness/commit/b72c55c18ce8c32243bc9dddbab1cafb1c500fd1))
+* **flutter:** publish the Dart and Flutter correctness check ([d6649de](https://github.com/repentsinner/bug-free-happiness/commit/d6649de9078339657c5398cc57ed8f0da936e36d))
+
 ## [0.8.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.8.0...v0.8.1) (2026-11-15)
 
 
