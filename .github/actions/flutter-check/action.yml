@@ -39,11 +39,9 @@ runs:
       env:
         PACKAGE: ${{ inputs.path }}
         SDK_VERSION: ${{ inputs.sdk-version }}
-        FLOOR: ${{ inputs.floor }}
+        FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
       run: |
-        leg=()
-        if [ "$FLOOR" = true ]; then leg=(--floor); fi
-        "$GITHUB_ACTION_PATH/flutter-check.sh" resolve "${leg[@]}" \
+        "$GITHUB_ACTION_PATH/flutter-check.sh" resolve \
           --sdk-version "$SDK_VERSION" "$PACKAGE" >> "$GITHUB_OUTPUT"
 
     - name: Install Flutter
@@ -68,9 +66,6 @@ runs:
       shell: bash
       env:
         PACKAGE: ${{ inputs.path }}
-        EXPECT: ${{ inputs.expect }}
-        FLOOR: ${{ inputs.floor }}
-      run: |
-        leg=()
-        if [ "$FLOOR" = true ]; then leg=(--floor); fi
-        "$GITHUB_ACTION_PATH/flutter-check.sh" check "${leg[@]}" --expect "$EXPECT" "$PACKAGE"
+        FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
+        FLUTTER_CHECK_EXPECT: ${{ inputs.expect }}
+      run: '"$GITHUB_ACTION_PATH/flutter-check.sh" check "$PACKAGE"'

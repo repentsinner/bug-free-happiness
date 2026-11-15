@@ -37,10 +37,6 @@ on:
           every check matches.
         type: string
         default: pass
-      expect-floor:
-        description: Self-test only. As expect, for the floor leg; format cannot fail there.
-        type: string
-        default: pass
 
 permissions:
   contents: read
@@ -109,4 +105,6 @@ jobs:
           path: ${{ matrix.leg.path }}
           sdk-version: ${{ inputs.sdk-version }}
           floor: ${{ matrix.leg.floor }}
-          expect: ${{ matrix.leg.floor && inputs.expect-floor || inputs.expect }}
+          # The floor leg's self-test expects it to pass: it shows the relaxed
+          # infos rule, where the pinned leg's expect names the stricter failure.
+          expect: ${{ matrix.leg.floor && 'pass' || inputs.expect }}

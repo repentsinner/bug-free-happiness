@@ -13,12 +13,12 @@
 #       check that failed. --floor runs the floor leg's rules: the analyzer
 #       fails on errors and warnings but not infos, and formatting is not
 #       checked. --expect is for self-tests: pass, or the one check expected
-#       to fail (deps, analyze, format or tests).
+#       to fail (deps, analyze, format or tests). FLUTTER_CHECK_FLOOR=true
+#       and FLUTTER_CHECK_EXPECT set the same defaults from the environment.
 #
 #   flutter-check.sh resolve [--floor] [--sdk-version VERSION] PACKAGE
-#       Print the SDK the package needs as key=value lines: `toolchain`
-#       (the commands the check runs), `install` (the SDK to install) and
-#       `version`. --floor names the oldest SDK the package's `environment`
+#       Print the SDK the package needs as key=value lines: `install` (the
+#       SDK to install) and `version`. --floor names the oldest SDK the package's `environment`
 #       constraint admits: `flutter` for a Flutter package, `sdk` otherwise.
 set -euo pipefail
 
@@ -92,7 +92,7 @@ find_fvmrc() {
 }
 
 resolve() {
-  local sdk_version="" floor=false package
+  local sdk_version="" floor=${FLUTTER_CHECK_FLOOR:-false} package
   while [ $# -gt 0 ]; do
     case "$1" in
       --floor) floor=true; shift ;;
@@ -116,33 +116,29 @@ resolve() {
     [ -n "$constraint" ] || die "$package/pubspec.yaml has no environment.$key, so the floor leg has no oldest SDK to run"
     version=$(lower_bound "$constraint") ||
       die "$package/pubspec.yaml environment.$key is '$constraint', which names no oldest release such as ^3.4.0 or >=3.4.0"
-    echo "$package: floor $toolchain $version from environment.$key" >&2
-    echo "toolchain=$toolchain"
-    echo "install=$toolchain"
-    echo "version=$version"
-    return
-  fi
-
-  fvmrc=$(find_fvmrc "$package")
-  # .fvmrc names a Flutter release, and Flutter bundles Dart, so a Dart
-  # package pinned there runs the dart of that Flutter release: the one its
-  # developer runs through fvm.
-  if [ -n "$fvmrc" ]; then
-    install=flutter
-    pin=$fvmrc
-    version=$(sed -n 's/.*"flutter"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$fvmrc" | head -n 1)
-    is_release "$version" || die "$fvmrc names Flutter '$version', not a release such as 3.50.0"
-  elif [ -n "$sdk_version" ]; then
     install=$toolchain
-    pin=sdk-version
-    version=$sdk_version
-    is_release "$version" || die "sdk-version is '$version', not a release such as 3.50.0"
+    pin="environment.$key, the floor"
   else
-    die "$package has no SDK pin: add a .fvmrc naming a Flutter release, or set sdk-version"
+    fvmrc=$(find_fvmrc "$package")
+    # .fvmrc names a Flutter release, and Flutter bundles Dart, so a Dart
+    # package pinned there runs the dart of that Flutter release: the one its
+    # developer runs through fvm.
+    if [ -n "$fvmrc" ]; then
+      install=flutter
+      pin=$fvmrc
+      version=$(sed -n 's/.*"flutter"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$fvmrc" | head -n 1)
+      is_release "$version" || die "$fvmrc names Flutter '$version', not a release such as 3.50.0"
+    elif [ -n "$sdk_version" ]; then
+      install=$toolchain
+      pin=sdk-version
+      version=$sdk_version
+      is_release "$version" || die "sdk-version is '$version', not a release such as 3.50.0"
+    else
+      die "$package has no SDK pin: add a .fvmrc naming a Flutter release, or set sdk-version"
+    fi
   fi
 
   echo "$package: $install $version from $pin, $toolchain toolchain" >&2
-  echo "toolchain=$toolchain"
   echo "install=$install"
   echo "version=$version"
 }
@@ -222,8 +218,8 @@ check_package() {
 }
 
 check() {
-  expect=pass
-  floor=false
+  expect=${FLUTTER_CHECK_EXPECT:-pass}
+  floor=${FLUTTER_CHECK_FLOOR:-false}
   while [ $# -gt 0 ]; do
     case "$1" in
       --floor) floor=true; shift ;;

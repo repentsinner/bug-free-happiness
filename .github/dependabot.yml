@@ -1,7 +1,9 @@
 version: 2
 updates:
+  # The composite actions under .github/actions/ pin Actions too, and
+  # Dependabot reads only the directories listed here.
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories: ["/", "/.github/actions/*"]
     schedule:
       interval: "weekly"
     groups:
