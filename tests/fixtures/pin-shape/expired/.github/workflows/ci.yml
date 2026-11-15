@@ -1,0 +1,7 @@
+name: ci
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ublue-os/container-storage-action@911baca08baf30c8654933e9e9723cb399892140 # main 2025-08-03

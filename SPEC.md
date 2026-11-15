@@ -210,8 +210,10 @@ This repository publishes the checks, and the system shall:
   severity, naming the advisory, the affected package and the fixed
   version;
 - fail `quality / security` when a workflow references an external Action
-  by anything other than a 40-character commit SHA followed by a
-  `# vX.Y.Z` comment. Local references (`uses: ./...`) are exempt;
+  by anything other than a 40-character commit SHA followed by a comment
+  naming a release tag at that commit, the most specific one where several
+  point at it (`# v7.0.1`, not `# v7`). Local references (`uses: ./...`)
+  are exempt;
 - accept a suppression only from a file the adopter tracks, each entry
   carrying an expiry date and a one-line justification. An expired
   suppression fails the check again;
@@ -288,11 +290,20 @@ workflow pinned to it runs different code on its next run; package indexes
 refuse a republished version, and the Actions marketplace does not. A SHA
 pin makes the workflow file its own lockfile. Scanning catches a known
 advisory; a pin catches the structural defect before any advisory exists,
-runs offline, and fails on the pull request that introduced it. GitHub's
+and fails on the pull request that introduced it. GitHub's
 immutable releases freeze point-release tags where a maintainer opts in,
 but floating major tags stay mutable, so pins remain the durable defence.
 The version comment is required because a 40-character hash tells a
 reviewer nothing about whether a bump is plausible.
+
+**Why the comment is checked against the tags:** a comment's format
+cannot show whether it is true. An update that moves a pin and leaves a
+major-only comment behind produces `# v5` on a `v7.0.1` commit, which
+reads as two majors stale. Reading the tags at the pinned commit catches
+that, accepts a project whose releases are major-only, and names the
+exact tag to use. The check reads tags over the network; where a
+repository's tags cannot be read, it falls back to the comment's shape
+and warns rather than passing silently.
 
 **Why suppressions expire:** a suppression justified by "the vulnerable
 path is unreachable here" stops being true after a refactor, and a

@@ -104,19 +104,6 @@ run. Change the pass fixture's interval to `monthly`, and confirm
 
 ## Security class §road:security-class
 
-### Publish the pin-shape check §road:pin-shape-check
-
-Add a job to `security.yml` that fails when
-an external `uses:` reference under the caller's `.github/workflows/` is
-not `<owner>/<repo>@<40-hex SHA>` followed by `# vX.Y.Z`, naming each
-offending file and line. Local references are exempt, and the job adds
-no dependency. It also accepts `@<40-hex SHA>` followed by
-`# <branch> <YYYY-MM-DD>` for an Action listed in the caller's
-`.github/unreleased-actions.yml`, whose entries name the Action as
-`owner/repo` with `expires` and `reason`, and fails on an expired entry,
-naming it. §spec:supply-chain §spec:quality-classes. Depends on
-§road:dependabot-config-job.
-
 ### Add the advisory gate §road:advisory-gate
 
 Add a job to `security.yml` that runs `google/osv-scanner-action` over the
@@ -124,7 +111,7 @@ caller's lockfiles, and its workflow references through the GitHub
 Actions extractor. It fails on HIGH or CRITICAL advisories, annotates
 MEDIUM and LOW ones, reads suppressions from the caller's
 `osv-scanner.toml`, and refuses a suppression without an expiry.
-§spec:supply-chain. Depends on §road:pin-shape-check.
+§spec:supply-chain.
 
 ### Show the dependency delta on pull requests §road:dependency-review
 
@@ -134,21 +121,16 @@ requests, at the gate's threshold. §spec:supply-chain. Depends on
 
 ### Self-test against security fixtures §road:security-fixtures
 
-Add a passing fixture and three failing ones under
-`tests/fixtures/security/` — a workflow referencing an Action by tag, a
-workflow pinning an unreleased Action whose `unreleased-actions.yml` entry
-has expired, and a lockfile pinning a package with a known HIGH advisory.
-The passing fixture pins one unreleased Action under an unexpired entry.
-Make the `quality / security` summary job in
-`.github/workflows/quality.yml` also depend on calls expecting each
-outcome. §spec:supply-chain
+Add a passing fixture and a failing one under `tests/fixtures/security/`:
+a lockfile pinning a package with a known HIGH advisory. The pin-shape
+check already has its fixtures under `tests/fixtures/pin-shape/`. Make
+the `quality / security` summary job in `.github/workflows/quality.yml`
+also depend on a call expecting each outcome. §spec:supply-chain
 §spec:summary-jobs §spec:quality-classes. Depends on §road:advisory-gate.
 
 **Verify:** On a PR, confirm the checks list shows the security workflow
-passing on the passing fixture and failing on each failing one — the
-pin-shape job naming the offending file and line or the expired
-`unreleased-actions.yml` entry, the advisory job naming
-an advisory ID, the package and the fixed version — with
+passing on the passing fixture and failing on the failing one, the
+advisory job naming an advisory ID, the package and the fixed version, with
 `quality / security` green because each outcome matched. Add an expired
 suppression to the passing fixture's `osv-scanner.toml`, and confirm
 `quality / security` fails. Confirm a grouped Dependabot PR bumping a

@@ -1,0 +1,14 @@
+name: ci
+on: push
+jobs:
+  call:
+    uses: repentsinner/symphonize/.github/workflows/governance-lint.yml@c923c65b044d3ab7866520b5bfba5fca939aac6f # notation--v0.2.16
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+      - uses: ./.github/actions/local
+      - uses: ublue-os/container-storage-action@911baca08baf30c8654933e9e9723cb399892140 # main 2025-08-03
+      - name: Not a uses line
+        run: echo "uses: actions/checkout@v4"
