@@ -156,6 +156,29 @@ does not cut a notation release.
 may add, rename or remove jobs without any adopter touching its
 ruleset, because only the summary job's name is required.
 
+The Python workflow runs ruff's lint and format checks, a type checker
+the adopter names (pyright, mypy or none), and the project's tests from
+its locked environment. It pins ruff, pyright and mypy itself; pytest
+comes from the project's lock, because the tests import the project's
+dependencies. Each check runs to completion, and a final step decides
+the job, so one failure does not hide another.
+
+**Why pin the lint tools centrally:** a ruff or pyright release brings
+new findings that need code edits, and every adopter carried its own
+pin, so one tool release meant one bump per adopter. The pins live in
+a uv project at `.github/tools/python/`, which the workflow reads from
+its own commit, so a caller gets the versions its pinned SHA was tested
+with. Dependabot proposes each tool bump there, the self-test gates it,
+and adopters take it with the SHA bump Dependabot already proposes. **Tradeoff accepted:** an adopter's local ruff, from its lock
+or pre-commit, can drift from the workflow's until the adopter matches
+it.
+
+**Why the self-test names the failing step:** a call that fails leaves
+a failed job in every run and marks each pull request unstable. The
+workflow's test-only `expect` input names the one check a fixture
+should fail, so every self-test call passes when the workflow behaves,
+and a wrong outcome still fails `quality / correctness`.
+
 ## Supply chain §spec:supply-chain
 *Status: in progress*
 

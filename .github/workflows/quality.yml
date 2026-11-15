@@ -107,6 +107,57 @@ jobs:
           expect ungrouped 1 "minor and patch"
           [ "$mismatches" -eq 0 ]
 
+  # Self-test of python-correctness.yml: one call per fixture under
+  # tests/fixtures/python/. Each failing fixture breaks exactly one check, and
+  # `expect` names it, so every call passes when the workflow behaves and the
+  # run carries no failed job.
+
+  python-pass:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/python-correctness.yml
+    with:
+      path: tests/fixtures/python/pass
+
+  python-pass-mypy:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/python-correctness.yml
+    with:
+      path: tests/fixtures/python/pass
+      type-checker: mypy
+
+  python-fail-lint:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/python-correctness.yml
+    with:
+      path: tests/fixtures/python/fail-lint
+      expect: lint
+
+  python-fail-format:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/python-correctness.yml
+    with:
+      path: tests/fixtures/python/fail-format
+      expect: format
+
+  python-fail-types:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/python-correctness.yml
+    with:
+      path: tests/fixtures/python/fail-types
+      expect: types
+
+  python-fail-tests:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/python-correctness.yml
+    with:
+      path: tests/fixtures/python/fail-tests
+      expect: tests
   # Summary jobs carry the required check names. Each runs whatever its
   # dependencies' outcome, because GitHub counts a skipped required check as
   # passing. classify is a dependency too: if it fails, the class jobs skip.
@@ -141,7 +192,15 @@ jobs:
 
   correctness:
     name: quality / correctness
-    needs: [classify, actionlint]
+    needs:
+      - classify
+      - actionlint
+      - python-pass
+      - python-pass-mypy
+      - python-fail-lint
+      - python-fail-format
+      - python-fail-types
+      - python-fail-tests
     if: always()
     runs-on: ubuntu-latest
     steps:

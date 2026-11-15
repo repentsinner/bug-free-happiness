@@ -48,17 +48,18 @@ project's linter, format check, type checker and tests.
 
 ### Self-test against Python fixtures §road:python-fixtures
 
-Add a passing and a failing uv project under `tests/fixtures/python/`,
-and make `quality / correctness` in `.github/workflows/quality.yml`
-depend on calls that expect each outcome. §spec:stack-implementations
+Add a passing uv project and one failing project per check (lint,
+format, types, tests) under `tests/fixtures/python/`, and make
+`quality / correctness` in `.github/workflows/quality.yml` depend on a
+call per fixture, each naming its expected failure through `expect`,
+plus a mypy call on the passing project. §spec:stack-implementations
 §spec:summary-jobs §spec:quality-classes. Depends on
 §road:python-correctness-workflow.
 
-**Verify:** On a PR, confirm the checks list shows the Python workflow
-passing on the passing fixture and failing on the failing fixture, with
-`quality / correctness` green because each outcome matched. Break the
-passing fixture's test, and confirm `quality / correctness` fails and
-blocks merge.
+**Verify:** On a PR, confirm every Python call passes, each failing
+fixture's log shows its named check failing and the others passing, and
+`quality / correctness` is green. Break the passing fixture's test, and
+confirm `quality / correctness` fails and blocks merge.
 
 ## Dart and Flutter correctness workflow §road:flutter-correctness
 

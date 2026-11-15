@@ -1,0 +1,3 @@
+# Bytecode from running the Python fixtures locally.
+__pycache__/
+.venv/

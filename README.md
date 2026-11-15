@@ -97,6 +97,25 @@ jobs:
 build, lint and test jobs. This repository's own
 [`quality.yml`](.github/workflows/quality.yml) is a complete example.
 
+## Python correctness
+
+A uv project calls `python-correctness.yml` and makes its
+`quality / correctness` summary job depend on the call. The workflow
+runs ruff's lint and format checks, the type checker the call names
+(`pyright`, the default, `mypy`, or `none`), and `pytest` from the
+project's lock. It pins ruff, pyright and mypy itself, so match those
+versions locally (§spec:stack-implementations). mypy reads its targets from the project's
+`[tool.mypy]` settings.
+
+```yaml
+  python:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: repentsinner/bug-free-happiness/.github/workflows/python-correctness.yml@<sha> # v0.4.0
+    with:
+      type-checker: pyright
+```
+
 ## Optional checks
 
 `quality / security` reports supply-chain findings on each pull request.
