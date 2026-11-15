@@ -1,3 +1,11 @@
+# [0.10.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.9.0...v0.10.0) (2026-11-15)
+
+
+### Features
+
+* **flutter:** fetch private git dependencies with an App token ([dd78970](https://github.com/repentsinner/bug-free-happiness/commit/dd7897061f8749ff919c5d8a4aa516fb3d96cbf4))
+* **flutter:** run a downgrade leg on request ([4089098](https://github.com/repentsinner/bug-free-happiness/commit/4089098e8ff1e791ea63aaedba1c42ef4430b54f))
+
 # [0.9.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.8.1...v0.9.0) (2026-11-15)
 
 
