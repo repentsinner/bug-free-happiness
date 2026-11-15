@@ -1,7 +1,11 @@
 # actionlint's context model predates job.workflow_repository and
 # job.workflow_sha, which GitHub provides in a reusable workflow's job.
-# python-correctness.yml reads them to fetch its own tool pins.
+# python-correctness.yml reads them to fetch its own tool pins, and
+# flutter-correctness.yml to fetch its own action.
 paths:
   .github/workflows/python-correctness.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined in object type'
+  .github/workflows/flutter-correctness.yml:
     ignore:
       - 'property "workflow_(repository|sha)" is not defined in object type'
