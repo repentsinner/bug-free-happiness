@@ -40,8 +40,12 @@ runs:
         PACKAGE: ${{ inputs.path }}
         SDK_VERSION: ${{ inputs.sdk-version }}
         FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
+      # The Check step runs a copy outside the workspace, made here before
+      # any of the package's code runs, so its tests cannot rewrite the
+      # script that judges them.
       run: |
-        "$GITHUB_ACTION_PATH/flutter-check.sh" resolve \
+        cp "$GITHUB_ACTION_PATH/flutter-check.sh" "$RUNNER_TEMP/flutter-check.sh"
+        "$RUNNER_TEMP/flutter-check.sh" resolve \
           --sdk-version "$SDK_VERSION" "$PACKAGE" >> "$GITHUB_OUTPUT"
 
     - name: Install Flutter
@@ -68,4 +72,4 @@ runs:
         PACKAGE: ${{ inputs.path }}
         FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
         FLUTTER_CHECK_EXPECT: ${{ inputs.expect }}
-      run: '"$GITHUB_ACTION_PATH/flutter-check.sh" check "$PACKAGE"'
+      run: '"$RUNNER_TEMP/flutter-check.sh" check "$PACKAGE"'
