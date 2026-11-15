@@ -1,0 +1,7 @@
+# Output of running the Dart and Flutter fixtures locally. The fixtures are
+# libraries, so they commit no lockfile: each run resolves afresh, as an
+# adopter's library does in CI.
+.dart_tool/
+.flutter-plugins-dependencies
+build/
+pubspec.lock

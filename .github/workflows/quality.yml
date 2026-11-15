@@ -203,6 +203,67 @@ jobs:
     with:
       path: tests/fixtures/python/fail-tests
       expect: tests
+
+  # Self-test of flutter-correctness.yml against tests/fixtures/flutter/, the
+  # same way: each failing fixture breaks one check and `expect` names it.
+  # The passing call lists two packages, one Dart and one Flutter, each on its
+  # pinned SDK and its floor. The Flutter package's .fvmrc wins over
+  # sdk-version; the failing fixtures carry a .fvmrc too, so their Dart runs
+  # from that Flutter release. The floor fixture's info fails analysis on the
+  # pinned SDK only, because the floor leg does not treat infos as fatal.
+  flutter-pass:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: |
+        tests/fixtures/flutter/dart-pass
+        tests/fixtures/flutter/flutter-pass
+      sdk-version: 3.14.0
+      floor: true
+
+  flutter-floor:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: tests/fixtures/flutter/floor
+      sdk-version: 3.14.0
+      floor: true
+      expect: analyze
+
+  flutter-fail-deps:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: tests/fixtures/flutter/fail-deps
+      expect: deps
+
+  flutter-fail-analyze:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: tests/fixtures/flutter/fail-analyze
+      expect: analyze
+
+  flutter-fail-format:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: tests/fixtures/flutter/fail-format
+      expect: format
+
+  flutter-fail-tests:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/flutter-correctness.yml
+    with:
+      packages: tests/fixtures/flutter/fail-tests
+      expect: tests
+
   # Summary jobs carry the required check names. Each runs whatever its
   # dependencies' outcome, because GitHub counts a skipped required check as
   # passing. classify is a dependency too: if it fails, the class jobs skip.
@@ -246,6 +307,12 @@ jobs:
       - python-fail-format
       - python-fail-types
       - python-fail-tests
+      - flutter-pass
+      - flutter-floor
+      - flutter-fail-deps
+      - flutter-fail-analyze
+      - flutter-fail-format
+      - flutter-fail-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
