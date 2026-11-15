@@ -92,7 +92,8 @@ An adopting repository emits each required class from exactly one
 summary job whose display name is the class's check name. The summary
 job shall:
 
-- run in a workflow triggered by both `pull_request` and `merge_group`;
+- run in a workflow triggered by `pull_request`, `merge_group`, and a
+  push to the default branch;
 - depend on every job that implements the class;
 - run whatever the outcome of those jobs;
 - fail when any of those jobs failed or was cancelled;
@@ -105,6 +106,13 @@ a dependency fails, and the pull request merges.
 
 **Why `merge_group`:** in a merge queue, a required check without a
 `merge_group` trigger never reports, and the queue stalls.
+
+**Why a push to the default branch:** the Review ruleset does not
+require a pull request to be up to date before merging
+(§spec:ruleset-template), so two changes that pass separately can break
+together once both land. Only a run on the default branch tests that
+combination. The pull request run stays the gate; the default-branch
+run is the cheap check behind it.
 
 **Why a local summary job, not a direct reusable workflow call:** a
 reusable workflow call reports as `<caller job> / <called job>`, so the
@@ -342,6 +350,21 @@ secret stores.
 **Why the App ID varies:** Flywheel requires each adopter to create a
 private App of its own (Flywheel ADR 0002), so each owner's App has a
 different ID.
+
+**Why not strict:** a strict ruleset requires each pull request to be
+up to date before it merges, so every merge leaves every other open
+pull request behind, to be updated and tested again. Dependabot updates
+a pull request only on a conflict, and native auto-merge does not
+update one at all, so a queued update waits behind until a person
+updates it. A merge queue keeps strict's guarantee without that cost:
+it tests each pull request merged onto the latest default branch. Where
+the plan offers a queue, an adopter enables it; elsewhere the
+default-branch run (§spec:summary-jobs) catches a broken combination
+after it lands. **Tradeoff accepted:** Flywheel releases on the push
+that merges, before that run finishes, so a combination that breaks
+only once merged can be tagged and released before the run reports.
+The release is fixed forward. Flywheel's `release_as_draft` delays only
+the GitHub Release, not the tag, so it does not close this gap.
 
 **Why pinned sources:** a required check from any source also accepts a
 commit status. Anyone with status write access can post a successful
