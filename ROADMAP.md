@@ -86,27 +86,49 @@ caller naming it fails. §spec:stack-implementations. Depends on
 the workflow with `none` from a fixture, and confirm the job fails with
 an error naming the accepted values.
 
-## Dart and Flutter correctness workflow §road:flutter-correctness
+## Dart and Flutter correctness check §road:flutter-correctness
 
-### Publish the Flutter correctness workflow §road:flutter-correctness-workflow
+### Publish the Dart and Flutter check §road:flutter-correctness-workflow
 
-Add reusable `.github/workflows/flutter-correctness.yml` that runs a Dart
-or Flutter project's analyzer, format check and tests.
+Add the check script, the composite action
+`.github/actions/flutter-check/action.yml` and the reusable
+`.github/workflows/flutter-correctness.yml` around it, running dependency
+resolution, analysis with infos fatal, the format check and tests on each
+listed package with the SDK from `.fvmrc` or `sdk-version`, and an
+`expect` input for self-tests. §spec:flutter-correctness
 §spec:stack-implementations.
 
-### Self-test against Flutter fixtures §road:flutter-fixtures
+### Add the floor leg §road:flutter-floor-leg
 
-Add a passing and a failing Flutter project under
-`tests/fixtures/flutter/`, and make `quality / correctness` depend on
-calls that expect each outcome. §spec:stack-implementations
-§spec:summary-jobs §spec:quality-classes. Depends on
+Add a `floor` input that also runs the check on the oldest SDK a
+package's `environment` constraint admits, under the floor leg's relaxed
+rules. §spec:flutter-correctness. Depends on
 §road:flutter-correctness-workflow.
 
-**Verify:** On a PR, confirm the checks list shows the Flutter workflow
-passing on the passing fixture and failing on the failing fixture, with
-`quality / correctness` green because each outcome matched. Break the
-passing fixture's analyzer check, and confirm `quality / correctness`
-fails and blocks merge.
+### Fetch private git dependencies §road:flutter-private-deps
+
+Add the `app-client-id` input and `app-private-key` secret that mint a
+read-only token for private git dependencies, as the Python workflow
+does. §spec:flutter-correctness §spec:stack-implementations. Depends on
+§road:flutter-correctness-workflow.
+
+### Self-test against Dart and Flutter fixtures §road:flutter-fixtures
+
+Add a passing Dart package, a passing Flutter package, a package for the
+floor leg and one failing fixture per check under `tests/fixtures/flutter/`,
+and make `quality / correctness` in `.github/workflows/quality.yml` depend
+on calls expecting each outcome. §spec:flutter-correctness
+§spec:summary-jobs §spec:quality-classes. Depends on
+§road:flutter-floor-leg.
+
+**Verify:** On a PR, confirm the checks list shows a passing call for each
+passing fixture, and for each failing fixture a call that passes because
+its `expect` names the check that failed, with `quality / correctness`
+green. Break the passing Dart fixture's formatting and confirm
+`quality / correctness` fails. Run the check script locally against the
+passing Flutter fixture and confirm it reaches the same verdict as CI.
+Remove a fixture's `.fvmrc` without setting `sdk-version` and confirm the
+check fails naming the missing SDK pin.
 
 ## Dependabot configuration check §road:dependabot-config-check
 
