@@ -199,14 +199,3 @@ it lists every difference from `rulesets/`. Apply, rerun the audit, and
 confirm it reports no drift. Confirm a Dependabot PR in the pilot
 satisfies `flywheel/conventional-commit`. Open a PR whose test fails,
 and confirm it cannot auto-merge.
-
-## Retire the governance-schema workflow §road:retire-schema-workflow
-
-### Remove the governance-schema workflow §road:remove-schema-workflow
-
-Delete `.github/workflows/governance-lint.yml` and its mentions in
-`README.md`. §spec:release-automation §spec:stack-implementations.
-
-**Verify:** Confirm `.github/workflows/` holds no `governance-lint.yml`
-and `README.md` does not mention it. Confirm a caller pinned to `@v1`
-still resolves the workflow, because that tag no longer moves.
