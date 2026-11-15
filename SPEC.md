@@ -179,6 +179,12 @@ This repository publishes the checks, and the system shall:
 - accept a suppression only from a file the adopter tracks, each entry
   carrying an expiry date and a one-line justification. An expired
   suppression fails the check again;
+- accept, for an external Action that publishes no release, a 40-character
+  commit SHA followed by a `# <branch> <YYYY-MM-DD>` comment naming the
+  branch and date of the pinned commit, when the adopter's
+  `.github/unreleased-actions.yml` lists that Action by `owner/repo` with
+  an expiry date and a one-line justification. An expired entry fails the
+  check again, and a tag or branch reference never passes;
 - report, without failing, advisories newly published against an
   adopter's default branch, weekly, to its GitHub Security tab;
 - fail `quality / security` when the adopter's Dependabot configuration
@@ -256,6 +262,20 @@ reviewer nothing about whether a bump is plausible.
 path is unreachable here" stops being true after a refactor, and a
 permanent entry never says so. An expiry forces a recheck on a date the
 reviewer chose.
+
+**Why an exception for unreleased Actions:** some maintained Actions
+publish no release at all, because the projects behind them consume them
+from the default branch. A SHA pins such an Action's code as firmly as any
+other, so the version comment is the one requirement it cannot meet, and
+the exception relaxes only that. The branch and date in its place still
+tell a reviewer whether a bump is plausible. No version update can be
+proposed for a reference with no version, so the entry's expiry is what
+prompts a recheck of whether upstream has started releasing.
+
+**Rejected — vendoring an unreleased Action:** copying it into each
+adopter that uses it moves upstream's maintenance into every one of them,
+and its updates then arrive by hand-copying instead of through a reviewed
+bump.
 
 **Why a weekly audit as well as the gate:** most advisories affecting a
 repository are published after the dependency merged, which a
