@@ -1,3 +1,11 @@
+# [0.7.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.6.0...v0.7.0) (2026-11-15)
+
+
+### Features
+
+* **python:** deprecate mypy in favour of pyright, with a warning ([e9def52](https://github.com/repentsinner/bug-free-happiness/commit/e9def52946df478e48a4386a061c3f6bca51af9b))
+* **python:** require a type checker and warn when a caller disables it ([15d49bb](https://github.com/repentsinner/bug-free-happiness/commit/15d49bbe713d1d3ab68b08fa6fc119210ce8197a))
+
 # [0.6.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.5.0...v0.6.0) (2026-11-15)
 
 
