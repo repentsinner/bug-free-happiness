@@ -1,3 +1,11 @@
+# [0.4.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.3.1...v0.4.0) (2026-11-15)
+
+
+### Features
+
+* **python:** publish the Python correctness workflow ([4ed06c8](https://github.com/repentsinner/bug-free-happiness/commit/4ed06c8879ee0c00f8e6d25e198e869da7688a1e))
+* **python:** read the lint-tool pins from a uv project Dependabot bumps ([025602f](https://github.com/repentsinner/bug-free-happiness/commit/025602f57fd33fc1bda51978b5f8e9f1ab4f11a4))
+
 ## [0.3.1](https://github.com/repentsinner/bug-free-happiness/compare/v0.3.0...v0.3.1) (2026-11-15)
 
 
