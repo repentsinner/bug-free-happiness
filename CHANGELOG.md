@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.2.2...v0.3.0) (2026-11-15)
+
+
+### Features
+
+* **security:** check the Dependabot configuration under quality / security ([cd41d9e](https://github.com/repentsinner/bug-free-happiness/commit/cd41d9e575c55c6c3ceaa590ad0ddf6afb68e79c))
+
 ## [0.2.2](https://github.com/repentsinner/bug-free-happiness/compare/v0.2.1...v0.2.2) (2026-09-18)
 
 
