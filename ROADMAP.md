@@ -70,6 +70,12 @@ checker to pyright or mypy: add type stubs for its untyped C-extension
 dependency, fix the remaining findings, and drop `type-checker: none`.
 §spec:stack-implementations. Maintainer action in that repository.
 
+### Migrate the mypy adopters to pyright §road:migrate-mypy-adopters
+
+Move each adopter that calls the workflow with `type-checker: mypy` to
+pyright, fixing the findings pyright adds, then remove `mypy` from the
+input. §spec:stack-implementations. Maintainer action in each adopter.
+
 ### Remove the transitional none §road:remove-type-checker-none
 
 Remove `none` from `python-correctness.yml`'s `type-checker` input, so a
