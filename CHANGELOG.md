@@ -1,3 +1,11 @@
+# [0.6.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.5.0...v0.6.0) (2026-11-15)
+
+
+### Features
+
+* **security:** check each pin's comment against the tags at its commit ([0a82ff6](https://github.com/repentsinner/bug-free-happiness/commit/0a82ff668728ba6abb5ef02d683dd8e8461e109f))
+* **security:** check that every Action is pinned by SHA with its release ([33c87d5](https://github.com/repentsinner/bug-free-happiness/commit/33c87d571c77c5137a26cfe75fa3c72dc54f25d0))
+
 # [0.5.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.4.0...v0.5.0) (2026-11-15)
 
 
