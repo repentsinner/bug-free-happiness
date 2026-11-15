@@ -24,6 +24,12 @@ inputs:
       constraint admits, where the analyzer fails on errors and warnings but
       not infos, and formatting is not checked.
     default: "false"
+  downgrade:
+    description: >-
+      true runs the downgrade leg: the pinned SDK, with the package's direct
+      dependencies resolved to the oldest versions their constraints admit,
+      under the floor leg's analyzer and formatting rules. Not with floor.
+    default: "false"
   expect:
     description: >-
       Self-test only. pass, or the one check expected to fail: deps,
@@ -108,5 +114,6 @@ runs:
       env:
         PACKAGE: ${{ inputs.path }}
         FLUTTER_CHECK_FLOOR: ${{ inputs.floor }}
+        FLUTTER_CHECK_DOWNGRADE: ${{ inputs.downgrade }}
         FLUTTER_CHECK_EXPECT: ${{ inputs.expect }}
       run: '"$RUNNER_TEMP/flutter-check.sh" check "$PACKAGE"'
