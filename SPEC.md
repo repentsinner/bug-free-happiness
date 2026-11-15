@@ -216,6 +216,97 @@ workflow's test-only `expect` input names the one check a fixture
 should fail, so every self-test call passes when the workflow behaves,
 and a wrong outcome still fails `quality / correctness`.
 
+### Dart and Flutter correctness §spec:flutter-correctness
+
+Without a shared check, each Dart and Flutter project maintains its own
+correctness steps, and most maintain an incomplete set: among the
+adopters and the projects around them, fewer than half run the
+analyzer, under a third check formatting, and half run their tests. Each
+takes its SDK version from `.fvmrc`, from a literal in its workflow, or
+from the `stable` channel alone.
+
+The Dart and Flutter check is a script this repository publishes, with a
+reusable workflow and a composite action that run it. For each package
+it checks, the check shall:
+
+- use the Flutter toolchain when the package depends on the Flutter SDK,
+  and the Dart toolchain otherwise;
+- resolve dependencies, run the analyzer with infos fatal, check
+  formatting, and run the tests, each to completion, then fail when any
+  of them failed, naming each;
+- take the SDK version from the package's `.fvmrc` when one exists, and
+  otherwise from the caller's `sdk-version` input, failing when neither
+  names a version;
+- when the caller asks for a floor leg, also run on the oldest SDK the
+  package's `environment` constraint admits, where the analyzer fails on
+  errors and warnings but not infos, formatting is not checked, and the
+  tests run as on the pinned SDK;
+- check each package directory the caller lists, or the repository root
+  when it lists none.
+
+A project with private git dependencies names a GitHub App, as the
+Python workflow's callers do, and the check fetches them with a
+read-only token minted from it.
+
+Setup a project needs beyond the Dart and Flutter SDKs stays with the
+project: system packages, native toolchains, caches, code generation and
+platform builds. A project with such setup runs the composite action as
+a step of its own job, after its own setup steps. A project without any
+calls the reusable workflow. Either way, the job is one of the jobs its
+`quality / correctness` summary depends on.
+
+**Why a script, with a workflow and an action around it:** a project
+whose `tools/ci.sh` runs the same checks locally and in CI, so a
+passing local run predicts a passing CI run, keeps that property only
+if the shared checks are something its script can call. Shipping the
+checks as a script lets a developer, a project's own CI script and the
+workflow run one implementation, the way symphonize's governance lint
+backs its workflow, `/notation:lint` and the pre-commit hook.
+
+**Why the project owns the SDK pin:** the Python workflow pins its lint
+tools centrally because they are tools around the code. The Dart SDK is
+the code's toolchain: its analyzer, its formatter and the language
+version the code compiles against, which a developer's editor and local
+runs read from `.fvmrc` too. A central pin would push every SDK upgrade,
+and the code changes it brings, onto every adopter at once. `.fvmrc`
+wins over the input because it is the pin the developer already runs;
+the input serves packages without one.
+
+**Why never the `stable` channel alone:** an unpinned channel moves the
+analyzer and formatter under every project the day a release lands, so
+a pull request fails for findings its author did not introduce, and the
+same commit passes or fails depending on the day it runs.
+
+**Why infos are fatal and formatting is checked:** an info left in place
+becomes a warning in a later SDK, and an unformatted file turns every
+later edit to it into a formatting diff. Both are cheap to keep at zero
+and expensive to recover, so the pinned SDK enforces both on every
+package.
+
+**Why the floor leg relaxes infos and formatting:** a library's
+`environment` constraint is a claim about every SDK it admits, which
+only a build on the oldest one tests. That leg exists to prove the code
+analyzes and passes its tests there. Lint rules and formatter output
+change between SDK releases, so on the floor leg they report differences
+in the tools, not defects in the code.
+
+**Rejected — a system-packages input:** every system package list in the
+surveyed projects belonged to one project's own needs: a USB library for
+two device packages, a native toolchain and graphics libraries for one
+application's renderer. An input for them would collect each project's
+knowledge in the template, and an input cannot express a cache or a
+build step. The composite action leaves that setup in the project, where
+it already lives.
+
+**Rejected — platform builds in the shared check:** building for a
+platform needs that platform's runner and SDKs, and only applications
+need it. A library's correctness does not, and an application owns its
+build matrix.
+
+**Tradeoff accepted:** the check has two entry points to keep in step,
+the reusable workflow and the composite action. The workflow runs the
+action, so they cannot diverge in what they check.
+
 ## Supply chain §spec:supply-chain
 *Status: in progress*
 
