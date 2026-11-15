@@ -158,6 +158,7 @@ names an exact release, the job fails rather than run the `stable` channel
         packages/core
         packages/app
       floor: true
+      downgrade: true
 ```
 
 `packages` lists package directories and defaults to the repository root.
@@ -167,6 +168,16 @@ package, `environment.sdk` otherwise. That leg tests the claim a library's
 constraint makes, so it fails on analyzer errors and warnings but not
 infos, and it skips the format check, because lint rules and formatter
 output change between SDK releases.
+
+With `downgrade: true`, each package also runs on its pinned SDK with its
+direct dependencies at the oldest versions their constraints admit. The
+pinned leg resolves to the newest versions, so a lower bound that names a
+release without an API the code uses passes there and fails here. A project
+that depends on the library can resolve anywhere in the range, which is
+why a published library wants this leg. The leg follows the floor leg's
+analyzer and format rules. It leaves `dev_dependencies` at their pinned-leg
+versions, because the test runner's oldest releases don't load on a
+current SDK and the library's users never resolve them.
 
 A project with private git dependencies passes a GitHub App with Contents
 read access to them, as a Python project does. Each job mints a read-only
@@ -184,8 +195,8 @@ keys (§spec:flutter-correctness).
 
 A project that needs more than the SDK, such as system packages, a native
 toolchain or code generation, runs the `flutter-check` action as a step of
-its own job, after that setup. The action takes `path`, `sdk-version` and
-`floor`, and checks one package. It takes `app-client-id` and
+its own job, after that setup. The action takes `path`, `sdk-version`,
+`floor` and `downgrade`, and checks one package. It takes `app-client-id` and
 `app-private-key` as inputs too, so pass the key from a secret.
 
 ```yaml
@@ -201,11 +212,14 @@ The action runs [`flutter-check.sh`](.github/actions/flutter-check/flutter-check
 which a developer or a project's own CI script can run too. It checks each
 package directory it is given, with whichever `dart` and `flutter` are on
 PATH, so put the pinned SDK there first, for example with `fvm exec`. For
-the floor leg, put the floor SDK on PATH and pass `--floor`.
+the floor leg, put the floor SDK on PATH and pass `--floor`. For the
+downgrade leg, pass `--downgrade`. It puts the package's `pubspec.lock`
+back when it finishes.
 
 ```sh
 fvm exec bash flutter-check.sh packages/core packages/app
 PATH="$HOME/fvm/versions/3.44.4/bin:$PATH" bash flutter-check.sh --floor packages/core
+fvm exec bash flutter-check.sh --downgrade packages/core
 ```
 
 ## Optional checks

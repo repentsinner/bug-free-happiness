@@ -6,15 +6,19 @@
 # The script runs whichever `dart` and `flutter` are on PATH; the action
 # installs the SDK that `resolve` names before it runs `check`.
 #
-#   flutter-check.sh [check] [--floor] [--expect CHECK] [PACKAGE...]
+#   flutter-check.sh [check] [--floor | --downgrade] [--expect CHECK] [PACKAGE...]
 #       Resolve dependencies, analyze with infos fatal, check formatting and
 #       run the tests in each package directory (default: the current one).
 #       Every check runs to completion, then the verdict fails naming each
 #       check that failed. --floor runs the floor leg's rules: the analyzer
 #       fails on errors and warnings but not infos, and formatting is not
-#       checked. --expect is for self-tests: pass, or the one check expected
-#       to fail (deps, analyze, format or tests). FLUTTER_CHECK_FLOOR=true
-#       and FLUTTER_CHECK_EXPECT set the same defaults from the environment.
+#       checked. --downgrade runs the downgrade leg: the package's direct
+#       dependencies resolve to the oldest versions their constraints admit,
+#       under the floor leg's rules, and the package's pubspec.lock is
+#       restored afterwards. --expect is for self-tests: pass, or the one
+#       check expected to fail (deps, analyze, format or tests).
+#       FLUTTER_CHECK_FLOOR=true, FLUTTER_CHECK_DOWNGRADE=true and
+#       FLUTTER_CHECK_EXPECT set the same defaults from the environment.
 #
 #   flutter-check.sh resolve [--floor] [--sdk-version VERSION] PACKAGE
 #       Print the SDK the package needs as key=value lines: `install` (the
@@ -30,7 +34,7 @@ die() {
 }
 
 usage() {
-  echo "usage: flutter-check.sh [check] [--floor] [--expect CHECK] [PACKAGE...]" >&2
+  echo "usage: flutter-check.sh [check] [--floor | --downgrade] [--expect CHECK] [PACKAGE...]" >&2
   echo "       flutter-check.sh resolve [--floor] [--sdk-version VERSION] PACKAGE" >&2
   exit 2
 }
@@ -60,6 +64,34 @@ environment_of() {
       sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]+#.*$/, ""); gsub(/["\047]/, "")
       print; exit
     }' "$1/pubspec.yaml"
+}
+
+# The packages under pubspec.yaml's top-level `dependencies`, one per line,
+# without the SDK ones (`sdk: flutter`), which have no versions to lower.
+direct_dependencies_of() {
+  awk '
+    function flush() { if (name != "" && !sdk) print name }
+    /^dependencies:/ { inside = 1; next }
+    inside && /^[^[:space:]#]/ { exit }
+    inside && /^  ["\047]?[A-Za-z_][A-Za-z0-9_]*["\047]?:/ {
+      flush(); name = $1; sub(/:.*/, "", name); gsub(/["\047]/, "", name); sdk = 0; next
+    }
+    inside && /^[[:space:]]+sdk:/ { sdk = 1 }
+    END { flush() }' "$1/pubspec.yaml"
+}
+
+# Resolves as the pinned leg does, then lowers only the direct dependencies,
+# so the test runner and the rest of the dev tooling stay at versions
+# released together.
+downgrade_dependencies() {
+  local tool=$1
+  shift
+  "$tool" pub get
+  if [ $# -gt 0 ]; then
+    "$tool" pub downgrade "$@"
+  else
+    echo "no direct dependencies to downgrade"
+  fi
 }
 
 # The oldest release a constraint admits: ^X.Y.Z, >=X.Y.Z with or without an
@@ -159,10 +191,10 @@ run_check() {
 
 # The outcome --expect asks of one check. Analysis and tests cannot run
 # without resolved dependencies, so they are skipped when resolution fails,
-# and the floor leg skips formatting.
+# and the floor and downgrade legs skip formatting.
 wanted() {
   local check=$1
-  if [ "$floor" = true ] && [ "$check" = format ]; then
+  if [ "$leg" != pinned ] && [ "$check" = format ]; then
     echo skip
   elif [ "$check" = "$expect" ]; then
     echo fail
@@ -179,26 +211,47 @@ check_package() {
 
   local tool leg=pinned analyze=(--fatal-infos)
   tool=$(toolchain_of "$package")
+  [ "$floor" = true ] && leg=floor
+  [ "$downgrade" = true ] && leg=downgrade
   # Lint rules and formatter output change between SDK releases, so on the
   # floor leg they report the tools' differences, not the code's defects.
-  if [ "$floor" = true ]; then
-    leg=floor
+  # The downgrade leg proves compatibility as the floor leg does, and the
+  # pinned leg already enforces both.
+  if [ "$leg" != pinned ]; then
     analyze=(--fatal-warnings)
     [ "$tool" = flutter ] && analyze+=(--no-fatal-infos)
   fi
   echo "== $package: $tool toolchain, $leg leg"
   "$tool" --version
 
+  # The downgrade leg rewrites the lockfile, so a local run puts back the
+  # developer's resolution, or its absence, when the checks finish.
+  local lock="$package/pubspec.lock" saved=""
+  if [ "$leg" = downgrade ]; then
+    saved=$(mktemp)
+    if [ -f "$lock" ]; then cp "$lock" "$saved"; else rm -f "$saved"; fi
+  fi
+
   outcome=([analyze]=skip [format]=skip [tests]=skip)
-  run_check deps "$tool" pub get
+  if [ "$leg" = downgrade ]; then
+    local direct=()
+    mapfile -t direct < <(direct_dependencies_of "$package")
+    run_check deps downgrade_dependencies "$tool" "${direct[@]}"
+  else
+    run_check deps "$tool" pub get
+  fi
   if [ "${outcome[deps]}" = pass ]; then
     run_check analyze "$tool" analyze "${analyze[@]}"
   fi
-  if [ "$floor" = false ]; then
+  if [ "$leg" = pinned ]; then
     run_check format dart format --output=none --set-exit-if-changed .
   fi
   if [ "${outcome[deps]}" = pass ]; then
     run_check tests "$tool" test
+  fi
+
+  if [ "$leg" = downgrade ]; then
+    if [ -f "$saved" ]; then mv "$saved" "$lock"; else rm -f "$lock"; fi
   fi
 
   local check failed=() want
@@ -220,9 +273,11 @@ check_package() {
 check() {
   expect=${FLUTTER_CHECK_EXPECT:-pass}
   floor=${FLUTTER_CHECK_FLOOR:-false}
+  downgrade=${FLUTTER_CHECK_DOWNGRADE:-false}
   while [ $# -gt 0 ]; do
     case "$1" in
       --floor) floor=true; shift ;;
+      --downgrade) downgrade=true; shift ;;
       --expect) expect=${2-}; shift 2 ;;
       -*) usage ;;
       *) break ;;
@@ -232,8 +287,11 @@ check() {
     pass | deps | analyze | format | tests) ;;
     *) die "--expect must be pass, deps, analyze, format or tests, not '$expect'" ;;
   esac
-  if [ "$floor" = true ] && [ "$expect" = format ]; then
-    die "--expect format cannot match: the floor leg does not check formatting"
+  if [ "$floor" = true ] && [ "$downgrade" = true ]; then
+    die "--floor and --downgrade are separate legs: run one at a time"
+  fi
+  if { [ "$floor" = true ] || [ "$downgrade" = true ]; } && [ "$expect" = format ]; then
+    die "--expect format cannot match: the floor and downgrade legs do not check formatting"
   fi
   [ $# -gt 0 ] || set -- .
 
