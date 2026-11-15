@@ -6,17 +6,20 @@
 # The script runs whichever `dart` and `flutter` are on PATH; the action
 # installs the SDK that `resolve` names before it runs `check`.
 #
-#   flutter-check.sh [check] [--expect CHECK] [PACKAGE...]
+#   flutter-check.sh [check] [--floor] [--expect CHECK] [PACKAGE...]
 #       Resolve dependencies, analyze with infos fatal, check formatting and
 #       run the tests in each package directory (default: the current one).
 #       Every check runs to completion, then the verdict fails naming each
-#       check that failed. --expect is for self-tests: pass, or the one check
-#       expected to fail (deps, analyze, format or tests).
+#       check that failed. --floor runs the floor leg's rules: the analyzer
+#       fails on errors and warnings but not infos, and formatting is not
+#       checked. --expect is for self-tests: pass, or the one check expected
+#       to fail (deps, analyze, format or tests).
 #
-#   flutter-check.sh resolve [--sdk-version VERSION] PACKAGE
+#   flutter-check.sh resolve [--floor] [--sdk-version VERSION] PACKAGE
 #       Print the SDK the package needs as key=value lines: `toolchain`
 #       (the commands the check runs), `install` (the SDK to install) and
-#       `version`.
+#       `version`. --floor names the oldest SDK the package's `environment`
+#       constraint admits: `flutter` for a Flutter package, `sdk` otherwise.
 set -euo pipefail
 
 checks=(deps analyze format tests)
@@ -27,8 +30,8 @@ die() {
 }
 
 usage() {
-  echo "usage: flutter-check.sh [check] [--expect CHECK] [PACKAGE...]" >&2
-  echo "       flutter-check.sh resolve [--sdk-version VERSION] PACKAGE" >&2
+  echo "usage: flutter-check.sh [check] [--floor] [--expect CHECK] [PACKAGE...]" >&2
+  echo "       flutter-check.sh resolve [--floor] [--sdk-version VERSION] PACKAGE" >&2
   exit 2
 }
 
@@ -46,6 +49,28 @@ toolchain_of() {
 # under the project the day a release lands.
 is_release() {
   [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+# One key of pubspec.yaml's top-level `environment` map, unquoted.
+environment_of() {
+  awk -v key="$2" '
+    /^environment:/ { inside = 1; next }
+    inside && /^[^[:space:]#]/ { exit }
+    inside && $1 == key ":" {
+      sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]+#.*$/, ""); gsub(/["\047]/, "")
+      print; exit
+    }' "$1/pubspec.yaml"
+}
+
+# The oldest release a constraint admits: ^X.Y.Z, >=X.Y.Z with or without an
+# upper bound, or an exact X.Y.Z. A prerelease suffix admits prereleases of
+# that version; the oldest release it admits is still X.Y.Z.
+lower_bound() {
+  local re='^(\^|>=)?[[:space:]]*([0-9]+\.[0-9]+(\.[0-9]+)?)(-[0-9A-Za-z.]+)?([[:space:]]*<[^<>]*)?$'
+  [[ $1 =~ $re ]] || return 1
+  local version=${BASH_REMATCH[2]}
+  [[ $version == *.*.* ]] || version=$version.0
+  echo "$version"
 }
 
 # The nearest .fvmrc from the package up to the repository root, as fvm
@@ -67,9 +92,10 @@ find_fvmrc() {
 }
 
 resolve() {
-  local sdk_version="" package
+  local sdk_version="" floor=false package
   while [ $# -gt 0 ]; do
     case "$1" in
+      --floor) floor=true; shift ;;
       --sdk-version) sdk_version=${2-}; shift 2 ;;
       -*) usage ;;
       *) break ;;
@@ -81,6 +107,22 @@ resolve() {
 
   local toolchain install version source fvmrc
   toolchain=$(toolchain_of "$package")
+  if [ "$floor" = true ]; then
+    # A Flutter package's floor is a Flutter release, which bundles the Dart
+    # it runs, so its constraint is environment.flutter, not environment.sdk.
+    local key=sdk constraint
+    [ "$toolchain" = flutter ] && key=flutter
+    constraint=$(environment_of "$package" "$key")
+    [ -n "$constraint" ] || die "$package/pubspec.yaml has no environment.$key, so the floor leg has no oldest SDK to run"
+    version=$(lower_bound "$constraint") ||
+      die "$package/pubspec.yaml environment.$key is '$constraint', which names no oldest release such as ^3.4.0 or >=3.4.0"
+    echo "$package: floor $toolchain $version from environment.$key" >&2
+    echo "toolchain=$toolchain"
+    echo "install=$toolchain"
+    echo "version=$version"
+    return
+  fi
+
   fvmrc=$(find_fvmrc "$package")
   # .fvmrc names a Flutter release, and Flutter bundles Dart, so a Dart
   # package pinned there runs the dart of that Flutter release: the one its
@@ -123,7 +165,9 @@ run_check() {
 # without resolved dependencies, so they are skipped when resolution fails.
 wanted() {
   local check=$1
-  if [ "$check" = "$expect" ]; then
+  if [ "$floor" = true ] && [ "$check" = format ]; then
+    echo skip
+  elif [ "$check" = "$expect" ]; then
     echo fail
   elif [ "$expect" = deps ] && { [ "$check" = analyze ] || [ "$check" = tests ]; }; then
     echo skip
@@ -136,17 +180,26 @@ check_package() {
   package=$1
   [ -f "$package/pubspec.yaml" ] || die "$package has no pubspec.yaml"
 
-  local tool
+  local tool leg=pinned analyze=(--fatal-infos)
   tool=$(toolchain_of "$package")
-  echo "== $package: $tool toolchain"
+  # Lint rules and formatter output change between SDK releases, so on the
+  # floor leg they report the tools' differences, not the code's defects.
+  if [ "$floor" = true ]; then
+    leg=floor
+    analyze=(--fatal-warnings)
+    [ "$tool" = flutter ] && analyze+=(--no-fatal-infos)
+  fi
+  echo "== $package: $tool toolchain, $leg leg"
   "$tool" --version
 
-  outcome=([analyze]=skip [tests]=skip)
+  outcome=([analyze]=skip [format]=skip [tests]=skip)
   run_check deps "$tool" pub get
   if [ "${outcome[deps]}" = pass ]; then
-    run_check analyze "$tool" analyze --fatal-infos
+    run_check analyze "$tool" analyze "${analyze[@]}"
   fi
-  run_check format dart format --output=none --set-exit-if-changed .
+  if [ "$floor" = false ]; then
+    run_check format dart format --output=none --set-exit-if-changed .
+  fi
   if [ "${outcome[deps]}" = pass ]; then
     run_check tests "$tool" test
   fi
@@ -162,15 +215,17 @@ check_package() {
   done
   if [ "$expect" = pass ] && [ ${#failed[@]} -gt 0 ]; then
     local IFS=,
-    echo "::error::$package: failed checks: ${failed[*]}"
+    echo "::error::$package ($leg leg): failed checks: ${failed[*]}"
     mismatches=$((mismatches + 1))
   fi
 }
 
 check() {
   expect=pass
+  floor=false
   while [ $# -gt 0 ]; do
     case "$1" in
+      --floor) floor=true; shift ;;
       --expect) expect=${2-}; shift 2 ;;
       -*) usage ;;
       *) break ;;
@@ -180,6 +235,9 @@ check() {
     pass | deps | analyze | format | tests) ;;
     *) die "--expect must be pass, deps, analyze, format or tests, not '$expect'" ;;
   esac
+  if [ "$floor" = true ] && [ "$expect" = format ]; then
+    die "--expect format cannot match: the floor leg does not check formatting"
+  fi
   [ $# -gt 0 ] || set -- .
 
   declare -gA outcome

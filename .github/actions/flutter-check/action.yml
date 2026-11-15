@@ -18,6 +18,12 @@ inputs:
       SDK release for a package without a .fvmrc: a Flutter release for a
       Flutter package, a Dart release otherwise. A .fvmrc wins.
     default: ""
+  floor:
+    description: >-
+      true runs the floor leg: the oldest SDK the package's environment
+      constraint admits, where the analyzer fails on errors and warnings but
+      not infos, and formatting is not checked.
+    default: "false"
   expect:
     description: >-
       Self-test only. pass, or the one check expected to fail: deps,
@@ -33,8 +39,11 @@ runs:
       env:
         PACKAGE: ${{ inputs.path }}
         SDK_VERSION: ${{ inputs.sdk-version }}
+        FLOOR: ${{ inputs.floor }}
       run: |
-        "$GITHUB_ACTION_PATH/flutter-check.sh" resolve \
+        leg=()
+        if [ "$FLOOR" = true ]; then leg=(--floor); fi
+        "$GITHUB_ACTION_PATH/flutter-check.sh" resolve "${leg[@]}" \
           --sdk-version "$SDK_VERSION" "$PACKAGE" >> "$GITHUB_OUTPUT"
 
     - name: Install Flutter
@@ -60,5 +69,8 @@ runs:
       env:
         PACKAGE: ${{ inputs.path }}
         EXPECT: ${{ inputs.expect }}
+        FLOOR: ${{ inputs.floor }}
       run: |
-        "$GITHUB_ACTION_PATH/flutter-check.sh" check --expect "$EXPECT" "$PACKAGE"
+        leg=()
+        if [ "$FLOOR" = true ]; then leg=(--floor); fi
+        "$GITHUB_ACTION_PATH/flutter-check.sh" check "${leg[@]}" --expect "$EXPECT" "$PACKAGE"
