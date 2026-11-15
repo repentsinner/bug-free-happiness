@@ -102,7 +102,8 @@ build, lint and test jobs. This repository's own
 A uv project calls `python-correctness.yml` and makes its
 `quality / correctness` summary job depend on the call. The workflow
 runs ruff's lint and format checks, the type checker the call names
-(`pyright`, the default, `mypy`, or `none`), and `pytest` from the
+(`pyright`, the default, or `mypy`, which is deprecated and warns), and
+`pytest` from the
 project's lock. It pins ruff, pyright and mypy itself, so match those
 versions locally (§spec:stack-implementations). mypy reads its targets from the project's
 `[tool.mypy]` settings.

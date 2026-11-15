@@ -157,8 +157,11 @@ may add, rename or remove jobs without any adopter touching its
 ruleset, because only the summary job's name is required.
 
 The Python workflow runs ruff's lint and format checks, a type checker
-the adopter names (pyright, mypy or none), and the project's tests from
-its locked environment. It pins ruff, pyright and mypy itself; pytest
+the adopter names, and the project's tests from its locked environment.
+An adopter shall type-check with pyright, the default. mypy remains
+supported but deprecated: it warns on every run until its adopters move
+to pyright. `none` remains only while an adopter without a checker
+adopts one, and it warns on every run too. It pins ruff, pyright and mypy itself; pytest
 comes from the project's lock, because the tests import the project's
 dependencies. Each check runs to completion, and a final step decides
 the job, so one failure does not hide another.
@@ -175,6 +178,27 @@ limited to the repositories it is installed on and to read access, so
 `ssh://` sources keep working for developers while CI needs no personal
 credential. The caller passes the App's key because a token minted in
 another job cannot cross into a reusable workflow.
+
+**Why require a type checker but not a particular one:** type errors are
+correctness failures that tests miss, so `quality / correctness` without
+a checker is a weaker gate than its name claims. pyright and mypy follow
+the same typing specification and agree on ordinary code; they differ in
+speed, in how much unannotated code they check, and in mypy's plugins,
+which suit some frameworks. Strictness stays each adopter's choice.
+
+**Why prefer pyright and deprecate mypy:** adopters chose between the two
+case by case, so their suppressions, configuration and habits diverged
+for no gain. pyright is the majority, it checks unannotated code, and it
+is the engine behind the editor most adopters use, so CI reports what
+the editor shows. mypy's plugins suit frameworks these adopters do not
+use. A warning, not a failure, moves the mypy adopters without breaking
+their builds. **Tradeoff accepted:** a migration brings a round of new
+findings, because pyright checks code mypy skips.
+
+**Why a checker joins only with a stable release and an adopter:** each
+accepted checker costs a central pin, a self-test fixture and upkeep.
+A beta checker can change behavior on any release, which defeats a
+pinned gate, and a checker no adopter runs is cost without benefit.
 
 **Why pin the lint tools centrally:** a ruff or pyright release brings
 new findings that need code edits, and every adopter carried its own

@@ -19,7 +19,7 @@ on:
         type: string
         default: .
       type-checker:
-        description: pyright, mypy, or none.
+        description: pyright (preferred) or mypy (deprecated, warns). none is transitional and warns.
         type: string
         default: pyright
       expect:
@@ -154,8 +154,10 @@ jobs:
         run: |
           case "$TYPE_CHECKER" in
             pyright) uv run --with "pyright==${PYRIGHT_VERSION}" pyright ;;
-            mypy) uv run --with "mypy==${MYPY_VERSION}" mypy ;;
-            none) echo "type checking disabled by the caller" ;;
+            mypy)
+              echo "::warning::mypy is deprecated here; migrate to pyright (§spec:stack-implementations)"
+              uv run --with "mypy==${MYPY_VERSION}" mypy ;;
+            none) echo "::warning::type checking is disabled; adopters run pyright (§spec:stack-implementations)" ;;
             *) echo "::error::type-checker must be pyright, mypy or none, not '$TYPE_CHECKER'"; exit 1 ;;
           esac
 
