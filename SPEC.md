@@ -149,7 +149,7 @@ may add, rename or remove jobs without any adopter touching its
 ruleset, because only the summary job's name is required.
 
 ## Supply chain §spec:supply-chain
-*Status: not started*
+*Status: in progress*
 
 An adopter pulls third-party code from its stack's package index and
 from the GitHub Actions marketplace. Both are mutable, and both have been
@@ -172,11 +172,13 @@ This repository publishes the checks, and the system shall:
   carrying an expiry date and a one-line justification. An expired
   suppression fails the check again;
 - report, without failing, advisories newly published against an
-  adopter's default branch, weekly, to its GitHub Security tab.
+  adopter's default branch, weekly, to its GitHub Security tab;
+- fail `quality / security` when the adopter's Dependabot configuration
+  is missing or falls short of the one below, naming each gap.
 
 An adopter shall also carry a Dependabot configuration for the
-`github-actions` ecosystem and its stack's package ecosystem, weekly,
-grouping minor and patch updates.
+`github-actions` ecosystem and its stack's package ecosystem, at least
+weekly, grouping minor and patch updates.
 
 `quality / security` is an optional class (§spec:quality-classes). An
 adopter emits it from a summary job (§spec:summary-jobs) that depends on
@@ -191,6 +193,11 @@ updates, but it gates nothing. A pull request can land a vulnerable
 dependency, or an Action with poor hygiene and no advisory yet, before
 Dependabot has anything to say. Scanning gates introduction; Dependabot
 handles response.
+
+**Why check the Dependabot configuration:** Dependabot reports nothing
+for a repository without a configuration, or for an ecosystem the
+configuration leaves out. The gap stays invisible until someone reads
+the file, so the check reads it on every pull request.
 
 **Why osv-scanner:** one tool reads OSV.dev, which federates GitHub
 Security Advisories, PyPA and pub advisories, and it reads both stacks'

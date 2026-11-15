@@ -55,6 +55,44 @@ jobs:
           command -v shellcheck
           "$RUNNER_TEMP/actionlint"
 
+  # Self-test of security.yml: one call per fixture under
+  # tests/fixtures/dependabot/. The pass fixture's call succeeds and every
+  # other call fails; quality / security checks each outcome.
+  dependabot-config-pass:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      path: tests/fixtures/dependabot/pass
+
+  dependabot-config-missing-config:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      path: tests/fixtures/dependabot/missing-config
+
+  dependabot-config-missing-ecosystem:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      path: tests/fixtures/dependabot/missing-ecosystem
+
+  dependabot-config-infrequent:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      path: tests/fixtures/dependabot/infrequent
+
+  dependabot-config-ungrouped:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      path: tests/fixtures/dependabot/ungrouped
+
   # Summary jobs carry the required check names. Each runs whatever its
   # dependencies' outcome, because GitHub counts a skipped required check as
   # passing. classify is a dependency too: if it fails, the class jobs skip.
@@ -71,6 +109,32 @@ jobs:
         run: |
           jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
           exit 1
+
+  # Not a required check yet (§spec:supply-chain). On Flywheel's own commits
+  # classify skips every call, and a skipped call matches either outcome.
+  security:
+    name: quality / security
+    needs:
+      - classify
+      - dependabot-config-pass
+      - dependabot-config-missing-config
+      - dependabot-config-missing-ecosystem
+      - dependabot-config-infrequent
+      - dependabot-config-ungrouped
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a fixture's outcome is not the expected one
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          jq -e '
+            to_entries | all(
+              if .key == "classify" or .key == "dependabot-config-pass"
+              then .value.result == "success" or .value.result == "skipped"
+              else .value.result == "failure" or .value.result == "skipped"
+              end)' <<< "$NEEDS" > /dev/null
 
   correctness:
     name: quality / correctness
