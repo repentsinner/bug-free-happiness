@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.4.0...v0.5.0) (2026-11-15)
+
+
+### Features
+
+* **python:** fetch private git dependencies with an App token ([3abdd68](https://github.com/repentsinner/bug-free-happiness/commit/3abdd6885fac03db5b528af7f71a19a2286afb41))
+
 # [0.4.0](https://github.com/repentsinner/bug-free-happiness/compare/v0.3.1...v0.4.0) (2026-11-15)
 
 
