@@ -178,7 +178,9 @@ This repository publishes the checks, and the system shall:
 
 An adopter shall also carry a Dependabot configuration for the
 `github-actions` ecosystem and its stack's package ecosystem, at least
-weekly, grouping minor and patch updates.
+weekly, grouping minor and patch updates, with a 7-day cooldown. Its
+updates commit as `chore(deps)`, a type Flywheel auto-merges, so each
+version and security update lands once the required checks pass.
 
 `quality / security` is an optional class (§spec:quality-classes). An
 adopter emits it from a summary job (§spec:summary-jobs) that depends on
@@ -198,6 +200,17 @@ handles response.
 for a repository without a configuration, or for an ecosystem the
 configuration leaves out. The gap stays invisible until someone reads
 the file, so the check reads it on every pull request.
+
+**Why dependency updates auto-merge:** across many adopters, a person
+reading each bump does not review a dependency's source; they wait out
+a soak period and merge. The cooldown is that soak, applied before the
+pull request opens, and `quality / correctness` is the gate that holds
+an update whose API change breaks the build or the tests. Security
+updates skip the cooldown and land as soon as checks pass. `build` stays
+outside Flywheel's auto-merge types, so a hand-written toolchain change
+typed `build` still waits for review. **Tradeoff accepted:** an adopter
+whose `quality / correctness` is thin lands updates on thin evidence, so
+strengthening that class is what keeps auto-merge safe.
 
 **Why osv-scanner:** one tool reads OSV.dev, which federates GitHub
 Security Advisories, PyPA and pub advisories, and it reads both stacks'
