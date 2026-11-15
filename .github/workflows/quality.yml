@@ -204,6 +204,41 @@ jobs:
       path: tests/fixtures/python/fail-tests
       expect: tests
 
+  # bfh-check, the local command, against the same fixtures: each failing
+  # fixture's summary names its own check, so a local run reports what CI does.
+  bfh-check:
+    needs: classify
+    if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Check each fixture's summary
+        run: |
+          mismatches=0
+          expect() {
+            local fixture=$1 checker=$2 want=$3 out
+            out=$(uvx -q --from ./.github/tools/python bfh-check \
+              --path "tests/fixtures/python/$fixture" --type-checker "$checker" 2>&1) || true
+            got=$(sed -n '/^== summary$/,$p' <<< "$out" | grep -v '^== summary$' | tr '\n' ' ')
+            if [ "$got" = "$want" ]; then
+              echo "ok       $fixture ($checker)"
+            else
+              echo "mismatch $fixture ($checker): got '$got', want '$want'"
+              mismatches=$((mismatches + 1))
+            fi
+          }
+          pass="lint: passed format: passed types: passed tests: passed "
+          expect pass pyright "$pass"
+          expect pass mypy "$pass"
+          expect fail-lint pyright "lint: failed format: passed types: passed tests: passed "
+          expect fail-format pyright "lint: passed format: failed types: passed tests: passed "
+          expect fail-types pyright "lint: passed format: passed types: failed tests: passed "
+          expect fail-tests pyright "lint: passed format: passed types: passed tests: failed "
+          [ "$mismatches" -eq 0 ]
+
   # Self-test of flutter-correctness.yml against tests/fixtures/flutter/, the
   # same way: each failing fixture breaks one check and `expect` names it.
   # The passing call lists two packages, one Dart and one Flutter, each on its
@@ -328,6 +363,7 @@ jobs:
       - flutter-fail-analyze
       - flutter-fail-format
       - flutter-fail-tests
+      - bfh-check
     if: always()
     runs-on: ubuntu-latest
     steps:

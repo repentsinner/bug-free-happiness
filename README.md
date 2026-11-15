@@ -119,9 +119,12 @@ versions locally (§spec:stack-implementations). mypy reads its targets from the
 
 A project with private git dependencies passes a GitHub App with
 Contents read access to them. The workflow mints a read-only token per
-run and fetches github.com git dependencies over HTTPS with it, so
-`ssh://` sources keep working for developers with SSH keys
-(§spec:stack-implementations).
+run and fetches the owner's github.com git dependencies over HTTPS with
+it. Declare those sources as `https://github.com/...` URLs, which
+Dependabot can also fetch. Developers authenticate them with `gh auth
+setup-git`, or keep using an SSH key by mapping the URLs back with
+`git config --global url."git@github.com:<owner>/".insteadOf
+"https://github.com/<owner>/"` (§spec:stack-implementations).
 
 ```yaml
     uses: repentsinner/bug-free-happiness/.github/workflows/python-correctness.yml@<sha> # v0.5.0
@@ -130,6 +133,22 @@ run and fetches github.com git dependencies over HTTPS with it, so
     secrets:
       app-private-key: ${{ secrets.DEPS_READER_PRIVATE_KEY }}
 ```
+
+## Local checks
+
+`bfh-check` runs the same checks on your machine, with the same tool
+versions: `uv sync --locked`, ruff's lint and format checks, the type
+checker, and pytest. Use the release your `quality.yml` pins, so the
+versions match:
+
+```bash
+uvx --from "git+https://github.com/repentsinner/bug-free-happiness@v0.8.0#subdirectory=.github/tools/python" bfh-check
+```
+
+Pass `--type-checker mypy` if your `quality.yml` names it, and put pytest
+arguments after `--`. The workflow and `bfh-check` both supply ruff and
+the type checker, so an adopter's dev group needs neither
+(§spec:stack-implementations).
 
 ## Dart and Flutter correctness
 
@@ -152,7 +171,7 @@ names an exact release, the job fails rather than run the `stable` channel
   flutter:
     needs: classify
     if: needs.classify.outputs.derived_release_commit != 'true' && needs.classify.outputs.promotion_pr != 'true'
-    uses: repentsinner/bug-free-happiness/.github/workflows/flutter-correctness.yml@<sha> # v0.8.0
+    uses: repentsinner/bug-free-happiness/.github/workflows/flutter-correctness.yml@<sha> # v0.9.0
     with:
       packages: |
         packages/core
@@ -205,7 +224,7 @@ its own job, after that setup. The action takes `path`, `sdk-version`,
     steps:
       - uses: actions/checkout@<sha> # v7.0.1
       - run: sudo apt-get install -y libusb-1.0-0-dev
-      - uses: repentsinner/bug-free-happiness/.github/actions/flutter-check@<sha> # v0.8.0
+      - uses: repentsinner/bug-free-happiness/.github/actions/flutter-check@<sha> # v0.9.0
 ```
 
 The action runs [`flutter-check.sh`](.github/actions/flutter-check/flutter-check.sh),
