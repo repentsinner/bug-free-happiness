@@ -1,0 +1,12 @@
+# Tool versions python-correctness.yml installs. The workflow reads these pins
+# from its own commit, so a caller always gets the versions its pinned SHA was
+# tested with. Dependabot (uv, /.github/tools/python) proposes bumps.
+[project]
+name = "python-correctness-tools"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "ruff==0.17.4",
+    "pyright==1.1.414",
+    "mypy==2.4.1",
+]

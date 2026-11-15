@@ -165,9 +165,11 @@ the job, so one failure does not hide another.
 
 **Why pin the lint tools centrally:** a ruff or pyright release brings
 new findings that need code edits, and every adopter carried its own
-pin, so one tool release meant one bump per adopter. Pinned here, it
-lands once and reaches adopters through the SHA bump Dependabot already
-proposes. **Tradeoff accepted:** an adopter's local ruff, from its lock
+pin, so one tool release meant one bump per adopter. The pins live in
+a uv project at `.github/tools/python/`, which the workflow reads from
+its own commit, so a caller gets the versions its pinned SHA was tested
+with. Dependabot proposes each tool bump there, the self-test gates it,
+and adopters take it with the SHA bump Dependabot already proposes. **Tradeoff accepted:** an adopter's local ruff, from its lock
 or pre-commit, can drift from the workflow's until the adopter matches
 it.
 

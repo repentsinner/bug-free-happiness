@@ -5,10 +5,12 @@ name: python-correctness
 # this workflow and makes its `quality / correctness` summary job depend on
 # the call.
 #
-# ruff, pyright and mypy are pinned here, so a tool bump lands once in this
-# repository and reaches every adopter through one SHA bump. pytest comes
-# from the project's own lock, because the tests import the project's
-# dependencies. Dependabot does not read these pins; bump them by hand.
+# ruff, pyright and mypy are pinned in this repository's
+# .github/tools/python/pyproject.toml, a uv project the job reads from the
+# workflow's own commit. A tool bump lands once here, proposed by Dependabot
+# and gated by the self-test, and reaches every adopter through one SHA bump.
+# pytest comes from the project's own lock, because the tests import the
+# project's dependencies.
 on:
   workflow_call:
     inputs:
@@ -33,10 +35,6 @@ permissions:
 jobs:
   python:
     runs-on: ubuntu-latest
-    env:
-      RUFF_VERSION: 0.17.4
-      PYRIGHT_VERSION: 1.1.414
-      MYPY_VERSION: 2.4.1
     defaults:
       run:
         working-directory: ${{ inputs.path }}
@@ -44,6 +42,50 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # The tool pins live beside this workflow, so read them from the
+      # commit the caller pinned. job.workflow_* names that commit;
+      # github.sha would name the caller's. Fail rather than fall back, so
+      # a missing context cannot quietly install other versions.
+      - name: Resolve this workflow's commit
+        id: self
+        working-directory: .
+        env:
+          WF_REPO: ${{ job.workflow_repository }}
+          WF_SHA: ${{ job.workflow_sha }}
+        run: |
+          if [ -z "$WF_REPO" ] || [ -z "$WF_SHA" ]; then
+            echo "::error::job.workflow_repository / job.workflow_sha are unavailable; cannot read the tool pins"
+            exit 1
+          fi
+          echo "repository=$WF_REPO" >> "$GITHUB_OUTPUT"
+          echo "sha=$WF_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the tool pins
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.self.outputs.repository }}
+          ref: ${{ steps.self.outputs.sha }}
+          path: .python-correctness-tools
+          sparse-checkout: .github/tools/python
+          persist-credentials: false
+
+      # Out of the checked-out tree before any tool walks it, then exported
+      # for the steps below.
+      - name: Read the tool pins
+        working-directory: .
+        run: |
+          pins="$RUNNER_TEMP/python-tools.toml"
+          mv .python-correctness-tools/.github/tools/python/pyproject.toml "$pins"
+          rm -r .python-correctness-tools
+          for tool in ruff pyright mypy; do
+            version=$(sed -n "s/^ *\"${tool}==\([^\"]*\)\".*/\1/p" "$pins")
+            if [ -z "$version" ]; then
+              echo "::error::no ${tool}== pin in .github/tools/python/pyproject.toml"
+              exit 1
+            fi
+            echo "${tool^^}_VERSION=$version" >> "$GITHUB_ENV"
+          done
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:

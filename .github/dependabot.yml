@@ -13,3 +13,19 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+
+  # ruff, pyright and mypy for python-correctness.yml. A bump lands here once,
+  # gated by the Python self-test, and adopters take it with their next SHA
+  # bump. One group, so the tools move together and the self-test runs once.
+  - package-ecosystem: "uv"
+    directory: "/.github/tools/python"
+    schedule:
+      interval: "weekly"
+    groups:
+      python-tools:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
