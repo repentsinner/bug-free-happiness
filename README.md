@@ -131,6 +131,22 @@ run and fetches github.com git dependencies over HTTPS with it, so
       app-private-key: ${{ secrets.DEPS_READER_PRIVATE_KEY }}
 ```
 
+## Local checks
+
+`bfh-check` runs the same checks on your machine, with the same tool
+versions: `uv sync --locked`, ruff's lint and format checks, the type
+checker, and pytest. Use the release your `quality.yml` pins, so the
+versions match:
+
+```bash
+uvx --from "git+https://github.com/repentsinner/bug-free-happiness@v0.8.0#subdirectory=.github/tools/python" bfh-check
+```
+
+Pass `--type-checker mypy` if your `quality.yml` names it, and put pytest
+arguments after `--`. The workflow and `bfh-check` both supply ruff and
+the type checker, so an adopter's dev group needs neither
+(§spec:stack-implementations).
+
 ## Optional checks
 
 `quality / security` reports supply-chain findings on each pull request.
