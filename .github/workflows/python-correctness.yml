@@ -111,17 +111,21 @@ jobs:
           owner: ${{ github.repository_owner }}
           permission-contents: read
 
-      # Adopters declare these dependencies as ssh:// URLs so a developer's
-      # SSH key fetches them locally. A runner has no key, so git rewrites
-      # both SSH forms to HTTPS carrying the token; uv fetches through git.
+      # Adopters declare these dependencies as https:// URLs, which Dependabot
+      # can also fetch, so git adds the token to the owner's HTTPS URLs; uv
+      # fetches through git. Other owners' URLs stay anonymous, since the
+      # token reads only this owner's repositories. The SSH forms are mapped
+      # too, for adopters that still declare ssh:// sources.
       - name: Route github.com git fetches through the token
         if: steps.deps-token.outputs.token != ''
         working-directory: .
         env:
           TOKEN: ${{ steps.deps-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
         run: |
           base="https://x-access-token:${TOKEN}@github.com/"
-          git config --global url."$base".insteadOf "ssh://git@github.com/"
+          git config --global url."$base$OWNER/".insteadOf "https://github.com/$OWNER/"
+          git config --global --add url."$base".insteadOf "ssh://git@github.com/"
           git config --global --add url."$base".insteadOf "git@github.com:"
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
